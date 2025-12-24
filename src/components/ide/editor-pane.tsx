@@ -1,6 +1,6 @@
-import { Textarea } from '@/components/ui/textarea';
 import { X } from 'lucide-react';
 import { sampleCode } from '@/lib/placeholder-data';
+import MonacoEditor from './monaco-editor';
 
 export default function EditorPane() {
   return (
@@ -14,10 +14,7 @@ export default function EditorPane() {
         </div>
       </div>
       <div className="flex-grow relative">
-        <Textarea
-          defaultValue={sampleCode}
-          className="absolute inset-0 w-full h-full resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code bg-transparent"
-        />
+        <MonacoEditor code={sampleCode} />
       </div>
     </div>
   );
