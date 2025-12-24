@@ -27,7 +27,7 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
   fileTree: FileNode[];
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
-  activeBottomPanel: BottomPanel;
+  activeBottomPanel: BottomPanel | null;
   onBottomPanelChange: (panel: BottomPanel) => void;
 }) {
   const activeNode = activeFile ? findNode(fileTree, activeFile) : null;

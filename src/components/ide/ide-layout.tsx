@@ -88,7 +88,16 @@ export default function IdeLayout() {
   const [openFiles, setOpenFiles] = React.useState<string[]>(['app/page.tsx']);
   const [activeFile, setActiveFile] = React.useState<string | null>('app/page.tsx');
   const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
-  const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel>('terminal');
+  const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel | null>('terminal');
+  const [bottomPanelSizes, setBottomPanelSizes] = React.useState([75, 25]);
+
+  const handleBottomPanelChange = (panel: BottomPanel) => {
+    if (activeBottomPanel === panel) {
+      setActiveBottomPanel(null);
+    } else {
+      setActiveBottomPanel(panel);
+    }
+  };
 
   const handleFileClick = (path: string) => {
     const node = findNode(fileTree, path);
@@ -241,6 +250,7 @@ export default function IdeLayout() {
   };
 
   const renderBottomPanel = () => {
+    if (!activeBottomPanel) return null;
     switch (activeBottomPanel) {
       case 'terminal':
         return <TerminalPane />;
@@ -261,8 +271,12 @@ export default function IdeLayout() {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={80} minSize={30}>
-          <ResizablePanelGroup direction="vertical" storageId="ide-editor-terminal-layout">
-            <ResizablePanel defaultSize={75} minSize={25}>
+          <ResizablePanelGroup 
+            direction="vertical" 
+            storageId="ide-editor-terminal-layout"
+            onLayout={setBottomPanelSizes}
+          >
+            <ResizablePanel defaultSize={bottomPanelSizes[0]} minSize={25}>
               <EditorPane
                 openFiles={openFiles}
                 activeFile={activeFile}
@@ -270,13 +284,17 @@ export default function IdeLayout() {
                 onClose={handleFileClose}
                 onSelect={handleTabSelect}
                 activeBottomPanel={activeBottomPanel}
-                onBottomPanelChange={setActiveBottomPanel}
+                onBottomPanelChange={handleBottomPanelChange}
               />
             </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={25} minSize={15}>
-              {renderBottomPanel()}
-            </ResizablePanel>
+            {activeBottomPanel && (
+              <>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={bottomPanelSizes[1]} minSize={15}>
+                  {renderBottomPanel()}
+                </ResizablePanel>
+              </>
+            )}
           </ResizablePanelGroup>
         </ResizablePanel>
       </ResizablePanelGroup>
