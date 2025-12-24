@@ -1,10 +1,11 @@
+"use client"
+
 import { File, Search, Bot, Settings, GitFork } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
   { icon: File, label: 'Files' },
-  { icon: Search, label: 'Search' },
   { icon: GitFork, label: 'Source Control' },
   { icon: Bot, label: 'AI Tools' },
   { icon: Settings, label: 'Settings' },
