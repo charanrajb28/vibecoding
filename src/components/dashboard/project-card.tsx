@@ -45,9 +45,9 @@ export default function ProjectCard({ project, iconName }: ProjectCardProps) {
   return (
     <Card 
         className={cn(
-            "h-full flex flex-col transition-all duration-300 ease-in-out",
+            "h-full flex flex-col transition-all duration-300 ease-in-out hover:scale-105",
             "bg-card text-card-foreground shadow-sm",
-            "border-border hover:border-primary"
+            "border hover:border-primary"
         )}
     >
         <CardHeader className="flex flex-row items-start justify-between z-10">
