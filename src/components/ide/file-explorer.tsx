@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
+import { useToast } from '@/hooks/use-toast';
 
 const FileIcon = ({ node, isExpanded }: { node: FileNode; isExpanded?: boolean }) => {
   if (node.type === 'folder') {
@@ -35,6 +36,15 @@ const FileTree = ({
   onFileClick: (name: string) => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(level === 0);
+  const { toast } = useToast();
+
+  const handleAction = (action: string, path: string) => {
+    console.log(`${action}: ${path}`);
+    toast({
+      title: `${action}`,
+      description: `Action performed on: ${path}`,
+    })
+  };
 
   const paddingLeft = `${level * 16 + 8}px`;
 
@@ -65,20 +75,24 @@ const FileTree = ({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-48">
-          <ContextMenuItem>
-            <FilePlus className="mr-2 h-4 w-4" />
-            New File
-          </ContextMenuItem>
-          <ContextMenuItem>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New Folder
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem>
+          {node.type === 'folder' && (
+            <>
+              <ContextMenuItem onClick={() => handleAction('New File', node.name)}>
+                <FilePlus className="mr-2 h-4 w-4" />
+                New File
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleAction('New Folder', node.name)}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                New Folder
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+            </>
+          )}
+          <ContextMenuItem onClick={() => handleAction('Rename', node.name)}>
             <Edit className="mr-2 h-4 w-4" />
             Rename
           </ContextMenuItem>
-          <ContextMenuItem className="text-red-500 focus:text-red-500">
+          <ContextMenuItem className="text-red-500 focus:text-red-500" onClick={() => handleAction('Delete', node.name)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </ContextMenuItem>
