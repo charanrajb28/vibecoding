@@ -1,8 +1,17 @@
 "use client"
 
-import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff, GitBranch, History } from "lucide-react";
+import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff, GitBranch, History, GitPullRequestArrow, GitMerge, CheckCircle, Plus, Tag, Archive, GitCommitHorizontal, GitBranchPlus, ArrowDown, ArrowUp, Clone, ArrowLeftRight } from "lucide-react";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent
+} from "../ui/dropdown-menu";
 import { CardHeader, CardTitle } from "../ui/card";
 import { ScrollArea } from "../ui/scroll-area";
 import { Textarea } from "../ui/textarea";
@@ -25,8 +34,88 @@ const commits = [
 export default function SourceControlPanel() {
     return (
         <div className="h-full flex flex-col bg-card text-foreground">
-            <CardHeader className="flex-shrink-0 border-b p-3">
-                <CardTitle className="text-sm font-semibold tracking-wider">SOURCE CONTROL</CardTitle>
+            <CardHeader className="flex-shrink-0 border-b p-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm font-semibold tracking-wider uppercase">Source Control</CardTitle>
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-7 w-7"><Check className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7"><RefreshCw className="h-4 w-4" /></Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-60">
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>View & Sort</DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Sort by Name</DropdownMenuItem>
+                                     <DropdownMenuItem>Sort by Path</DropdownMenuItem>
+                                     <DropdownMenuItem>Sort by Status</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuItem><GitPullRequestArrow className="mr-2"/>Pull</DropdownMenuItem>
+                            <DropdownMenuItem><ArrowUp className="mr-2" />Push</DropdownMenuItem>
+                            <DropdownMenuItem><Clone className="mr-2"/>Clone</DropdownMenuItem>
+                            <DropdownMenuItem><GitBranchPlus className="mr-2"/>Checkout to...</DropdownMenuItem>
+                            <DropdownMenuItem><ArrowDown className="mr-2"/>Fetch</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Commit</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Commit Staged</DropdownMenuItem>
+                                     <DropdownMenuItem>Commit All</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Changes</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Stage All Changes</DropdownMenuItem>
+                                     <DropdownMenuItem>Unstage All Changes</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Pull, Push</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Pull from...</DropdownMenuItem>
+                                     <DropdownMenuItem>Push to...</DropdownMenuItem>
+                                     <DropdownMenuItem>Sync</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Branch</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Create Branch</DropdownMenuItem>
+                                     <DropdownMenuItem>Delete Branch</DropdownMenuItem>
+                                     <DropdownMenuItem>Merge Branch</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Remote</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Add Remote</DropdownMenuItem>
+                                     <DropdownMenuItem>Remove Remote</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Stash</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Stash Changes</DropdownMenuItem>
+                                     <DropdownMenuItem>Pop Stash</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                             <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>Tags</DropdownMenuSubTrigger>
+                                 <DropdownMenuSubContent>
+                                     <DropdownMenuItem>Create Tag</DropdownMenuItem>
+                                     <DropdownMenuItem>Delete Tag</DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>Show Git Output</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </CardHeader>
 
             <div className="p-3 flex-shrink-0 border-b">
