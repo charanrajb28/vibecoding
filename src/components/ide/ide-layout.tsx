@@ -14,11 +14,11 @@ export default function IdeLayout() {
     <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
       <ActivityBar />
       <ResizablePanelGroup direction="horizontal" className="flex flex-1">
-        <ResizablePanel defaultSize={25} minSize={15}>
+        <ResizablePanel defaultSize={15} minSize={15}>
           <FileExplorer />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={75} minSize={30}>
+        <ResizablePanel defaultSize={70} minSize={30}>
           <ResizablePanelGroup direction="vertical">
             <ResizablePanel defaultSize={75} minSize={25}>
               <EditorPane />
@@ -28,6 +28,10 @@ export default function IdeLayout() {
               <TerminalPane />
             </ResizablePanel>
           </ResizablePanelGroup>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={15} minSize={15}>
+            <AiToolsPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
