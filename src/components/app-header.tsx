@@ -14,7 +14,7 @@ import { LifeBuoy, LogOut, Settings, User } from 'lucide-react';
 
 export default function AppHeader() {
   return (
-    <header className="container flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="container flex h-14  items-center justify-between px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="flex items-center">
           <Link href="/dashboard">
             <Logo />

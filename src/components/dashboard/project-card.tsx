@@ -33,7 +33,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const Icon = project.icon;
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-300 flex flex-col">
+    <Card className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary flex flex-col">
       <CardHeader className="flex flex-row items-start justify-between">
         <div>
           <CardTitle className="text-lg font-semibold">
