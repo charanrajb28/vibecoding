@@ -6,8 +6,6 @@ import MonacoEditor from './monaco-editor';
 import { FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { type BottomPanel } from './ide-layout';
-
 
 const findNode = (nodes: FileNode[], path: string): FileNode | null => {
   for (const node of nodes) {
@@ -21,14 +19,16 @@ const findNode = (nodes: FileNode[], path: string): FileNode | null => {
 };
 
 
-export default function EditorPane({ openFiles, activeFile, fileTree, onClose, onSelect, activeBottomPanel, onBottomPanelChange }: {
+export default function EditorPane({ openFiles, activeFile, fileTree, onClose, onSelect, activeBottomPanel, onBottomPanelChange, isWebViewOpen, onWebViewToggle }: {
   openFiles: string[];
   activeFile: string | null;
   fileTree: FileNode[];
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
-  activeBottomPanel: BottomPanel | null;
-  onBottomPanelChange: (panel: BottomPanel) => void;
+  activeBottomPanel: 'terminal' | null;
+  onBottomPanelChange: (panel: 'terminal') => void;
+  isWebViewOpen: boolean;
+  onWebViewToggle: () => void;
 }) {
   const activeNode = activeFile ? findNode(fileTree, activeFile) : null;
   const editorCode = activeNode?.content || `// File not found or has no content: ${activeFile}`;
@@ -70,9 +70,9 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
               <span className="ml-2 hidden sm:inline">Terminal</span>
            </Button>
            <Button 
-            variant={activeBottomPanel === 'webview' ? 'secondary' : 'ghost'} 
+            variant={isWebViewOpen ? 'secondary' : 'ghost'} 
             size="sm" 
-            onClick={() => onBottomPanelChange('webview')}
+            onClick={onWebViewToggle}
             className="h-8 px-2"
           >
               <Globe className="h-4 w-4" />

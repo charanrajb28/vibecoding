@@ -79,7 +79,7 @@ const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): File
 };
 
 export type ActivePanel = 'Files' | 'Source Control' | 'AI Tools';
-export type BottomPanel = 'terminal' | 'webview';
+export type BottomPanel = 'terminal';
 
 
 export default function IdeLayout() {
@@ -89,15 +89,15 @@ export default function IdeLayout() {
   const [activeFile, setActiveFile] = React.useState<string | null>('app/page.tsx');
   const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
   const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel | null>('terminal');
-  const [bottomPanelSizes, setBottomPanelSizes] = React.useState([75, 25]);
+  const [isWebViewOpen, setIsWebViewOpen] = React.useState(true);
 
   const handleBottomPanelChange = (panel: BottomPanel) => {
-    if (activeBottomPanel === panel) {
-      setActiveBottomPanel(null);
-    } else {
-      setActiveBottomPanel(panel);
-    }
+    setActiveBottomPanel(prev => prev === panel ? null : panel);
   };
+  
+  const handleWebViewToggle = () => {
+    setIsWebViewOpen(prev => !prev);
+  }
 
   const handleFileClick = (path: string) => {
     const node = findNode(fileTree, path);
@@ -249,49 +249,49 @@ export default function IdeLayout() {
     }
   };
 
-  const renderBottomPanel = () => {
-    if (!activeBottomPanel) return null;
-    switch (activeBottomPanel) {
-      case 'terminal':
-        return <TerminalPane />;
-      case 'webview':
-        return <WebView />;
-      default:
-        return null;
-    }
-  }
-
-
   return (
     <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
       <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
-      <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
+      <ResizablePanelGroup direction="horizontal" className="flex flex-1" id="ide-main-group">
         <ResizablePanel defaultSize={20} minSize={15}>
            {renderActivePanel()}
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={80} minSize={30}>
-          <ResizablePanelGroup 
-            direction="vertical" 
-            storageId="ide-editor-terminal-layout"
-            onLayout={setBottomPanelSizes}
-          >
-            <ResizablePanel defaultSize={bottomPanelSizes[0]} minSize={25}>
-              <EditorPane
-                openFiles={openFiles}
-                activeFile={activeFile}
-                fileTree={fileTree}
-                onClose={handleFileClose}
-                onSelect={handleTabSelect}
-                activeBottomPanel={activeBottomPanel}
-                onBottomPanelChange={handleBottomPanelChange}
-              />
+          <ResizablePanelGroup direction="horizontal" id="editor-webview-group">
+            <ResizablePanel defaultSize={isWebViewOpen ? 60 : 100} minSize={30}>
+              <ResizablePanelGroup 
+                direction="vertical" 
+                id="editor-terminal-group"
+              >
+                <ResizablePanel defaultSize={activeBottomPanel ? 75: 100} minSize={25}>
+                  <EditorPane
+                    openFiles={openFiles}
+                    activeFile={activeFile}
+                    fileTree={fileTree}
+                    onClose={handleFileClose}
+                    onSelect={handleTabSelect}
+                    activeBottomPanel={activeBottomPanel}
+                    onBottomPanelChange={handleBottomPanelChange}
+                    isWebViewOpen={isWebViewOpen}
+                    onWebViewToggle={handleWebViewToggle}
+                  />
+                </ResizablePanel>
+                {activeBottomPanel && (
+                  <>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={25} minSize={15}>
+                      <TerminalPane />
+                    </ResizablePanel>
+                  </>
+                )}
+              </ResizablePanelGroup>
             </ResizablePanel>
-            {activeBottomPanel && (
+            {isWebViewOpen && (
               <>
                 <ResizableHandle />
-                <ResizablePanel defaultSize={bottomPanelSizes[1]} minSize={15}>
-                  {renderBottomPanel()}
+                <ResizablePanel defaultSize={40} minSize={20}>
+                  <WebView />
                 </ResizablePanel>
               </>
             )}
