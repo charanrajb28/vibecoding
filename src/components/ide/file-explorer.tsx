@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from 'react';
-import { File, Folder, ChevronRight, ChevronDown } from 'lucide-react';
+import { File, Folder, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2 } from 'lucide-react';
 import { fileTree, type FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 
 const FileIcon = ({ node, isExpanded }: { node: FileNode; isExpanded?: boolean }) => {
   if (node.type === 'folder') {
@@ -43,17 +50,41 @@ const FileTree = ({
 
   return (
     <div>
-      <div
-        className={cn(
-          "flex items-center py-1.5 rounded-sm hover:bg-muted cursor-pointer text-sm select-none",
-          isActive && "bg-muted",
-        )}
-        style={{ paddingLeft }}
-        onClick={handleToggle}
-      >
-        <FileIcon node={node} isExpanded={isExpanded} />
-        <span>{node.name}</span>
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            className={cn(
+              "flex items-center py-1.5 rounded-sm hover:bg-muted cursor-pointer text-sm select-none",
+              isActive && "bg-muted",
+            )}
+            style={{ paddingLeft }}
+            onClick={handleToggle}
+          >
+            <FileIcon node={node} isExpanded={isExpanded} />
+            <span>{node.name}</span>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-48">
+          <ContextMenuItem>
+            <FilePlus className="mr-2 h-4 w-4" />
+            New File
+          </ContextMenuItem>
+          <ContextMenuItem>
+            <FolderPlus className="mr-2 h-4 w-4" />
+            New Folder
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem>
+            <Edit className="mr-2 h-4 w-4" />
+            Rename
+          </ContextMenuItem>
+          <ContextMenuItem className="text-red-500 focus:text-red-500">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
       {node.type === 'folder' && isExpanded && node.children && (
         <div>
           {node.children.map((child) => (
