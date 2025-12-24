@@ -13,7 +13,7 @@ export default function TemplateCard({ template }: TemplateCardProps) {
 
   return (
     <Link href={`/project/${template.id}`}>
-      <Card className="h-full hover:border-primary hover:shadow-xl transition-all duration-300 flex flex-col">
+      <Card className="h-full hover:border-primary hover:shadow-xl transition-all duration-300 flex flex-col hover:scale-105 ease-in">
         <CardHeader>
           <div className="flex items-center gap-4">
             {image && (

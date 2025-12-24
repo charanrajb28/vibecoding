@@ -6,7 +6,7 @@ import { GitBranch } from "lucide-react";
 
 export default function GitImportForm() {
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-2xl mx-auto border-dashed shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><GitBranch /> Import from a Git Repository</CardTitle>
         <CardDescription>
