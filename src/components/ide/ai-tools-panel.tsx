@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { sampleCode } from "@/lib/placeholder-data"
-import { explainCode, aiCodeCompletion } from "@/ai/flows/ai-code-completion"
+import { aiCodeCompletion } from "@/ai/flows/ai-code-completion"
+import { explainCode } from "@/ai/flows/ai-code-explanation"
 import { useToast } from "@/hooks/use-toast"
 
 export default function AiToolsPanel() {
@@ -26,8 +27,6 @@ export default function AiToolsPanel() {
     setCompletion("");
     setCorrectness(null);
     try {
-      // The Genkit flow for explanation is in ai-code-explanation.ts, but the prompt has aiCodeCompletion which has both.
-      // For simplicity, we'll use the aiCodeCompletion flow and just display the explanation part.
       const result = await explainCode({ code });
       setExplanation(result.explanation);
     } catch (error) {
