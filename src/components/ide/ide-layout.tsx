@@ -10,7 +10,6 @@ import ActivityBar from './activity-bar';
 import FileExplorer from './file-explorer';
 import EditorPane from './editor-pane';
 import TerminalPane from './terminal-pane';
-import AiToolsPanel from './ai-tools-panel';
 import { fileTree as initialFileTree, type FileNode } from '@/lib/placeholder-data';
 import { useToast } from "@/hooks/use-toast";
 
@@ -93,10 +92,13 @@ export default function IdeLayout() {
   const [activeFile, setActiveFile] = React.useState<string | null>('/app/page.tsx');
 
   const handleFileClick = (path: string) => {
-    if (!openFiles.includes(path)) {
-      setOpenFiles(prev => [...prev, path]);
+    const node = findNode(fileTree, path);
+    if (node && node.type === 'file') {
+      if (!openFiles.includes(path)) {
+        setOpenFiles(prev => [...prev, path]);
+      }
+      setActiveFile(path);
     }
-    setActiveFile(path);
   };
 
   const handleFileClose = (path: string) => {
@@ -124,15 +126,27 @@ export default function IdeLayout() {
         const nodeToRename = findNode(prevTree, oldPath);
         if (!nodeToRename) return prevTree;
 
-        let newTree = deleteNode(prevTree, oldPath);
+        // Recursively update paths for children
+        const updateChildrenPaths = (nodes: FileNode[], oldParentPath: string, newParentPath: string): FileNode[] => {
+            return nodes.map(node => {
+                const updatedPath = node.path!.replace(oldParentPath, newParentPath);
+                const updatedNode = { ...node, path: updatedPath };
+                if (updatedNode.children) {
+                    updatedNode.children = updateChildrenPaths(updatedNode.children, oldParentPath, newParentPath);
+                }
+                return updatedNode;
+            });
+        };
+
+        const tempTree = deleteNode(prevTree, oldPath);
         
         const renamedNode: FileNode = { ...nodeToRename, name: newName, path: newPath };
         if (renamedNode.children) {
-            renamedNode.children = addPathsToTree(renamedNode.children, newPath);
+            renamedNode.children = updateChildrenPaths(renamedNode.children, oldPath, newPath);
         }
-
-        newTree = addNode(newTree, parentPath, renamedNode);
-        return newTree;
+        
+        const finalTree = addNode(tempTree, parentPath, renamedNode);
+        return finalTree;
     });
 
     // Update open files and active file
@@ -148,15 +162,18 @@ export default function IdeLayout() {
     const nodeToDelete = findNode(fileTree, path);
     if (!nodeToDelete) return;
 
-    const pathsToDelete = nodeToDelete.type === 'folder' ? getAllChildFilePaths(nodeToDelete) : [path];
+    let pathsToDelete: string[] = [path];
+    if (nodeToDelete.type === 'folder') {
+        pathsToDelete = [path, ...getAllChildFilePaths(nodeToDelete)];
+    }
     
     // Close tabs for deleted files
-    setOpenFiles(prev => prev.filter(p => !pathsToDelete.includes(p) && p !== path));
+    const remainingOpenFiles = openFiles.filter(p => !pathsToDelete.includes(p));
+    setOpenFiles(remainingOpenFiles);
 
     // Update active file if it was deleted
-    if (activeFile && (pathsToDelete.includes(activeFile) || activeFile === path)) {
-        const remainingFiles = openFiles.filter(p => !pathsToDelete.includes(p) && p !== path);
-        setActiveFile(remainingFiles.length > 0 ? remainingFiles[0] : null);
+    if (activeFile && pathsToDelete.includes(activeFile)) {
+        setActiveFile(remainingOpenFiles.length > 0 ? remainingOpenFiles[remainingOpenFiles.length - 1] : null);
     }
 
     setFileTree(prevTree => deleteNode(prevTree, path));
@@ -190,7 +207,7 @@ export default function IdeLayout() {
     <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
       <ActivityBar />
       <ResizablePanelGroup direction="horizontal" className="flex flex-1">
-        <ResizablePanel defaultSize={15} minSize={10}>
+        <ResizablePanel defaultSize={20} minSize={15}>
           <FileExplorer 
             fileTree={fileTree}
             activeFile={activeFile}
@@ -202,7 +219,7 @@ export default function IdeLayout() {
           />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={70} minSize={30}>
+        <ResizablePanel defaultSize={80} minSize={30}>
           <ResizablePanelGroup direction="vertical">
             <ResizablePanel defaultSize={75} minSize={25}>
               <EditorPane
@@ -218,10 +235,6 @@ export default function IdeLayout() {
               <TerminalPane />
             </ResizablePanel>
           </ResizablePanelGroup>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={15} minSize={10}>
-          <AiToolsPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
