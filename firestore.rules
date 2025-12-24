@@ -1,0 +1,149 @@
+/**
+ * # Core Philosophy
+ * This ruleset enforces a strict user-ownership model. All user-specific data, such as profiles
+ * and projects, is private and can only be accessed by the user who owns it. The security model
+ * is designed to be simple, performant, and secure by default.
+ *
+ * # Data Structure
+ * The data is organized hierarchically to reflect ownership clearly:
+ * - `/users/{userId}`: Stores private user profile information.
+ * - `/users/{userId}/projects/{projectId}`: Stores projects created by and belonging to the user.
+ * - `/templates/{templateId}`: A top-level collection for public, read-only project templates.
+ *
+ * # Key Security Decisions
+ * - User Enumeration is Disallowed: Listing the top-level `/users` collection is forbidden to protect user privacy.
+ * - Strict Ownership: A user can only access data located under their own `/users/{userId}` path.
+ * - Structural Segregation: Public data (`/templates`) is kept in a separate collection from private user data (`/users`) to allow for simple and secure public list operations without exposing private information.
+ * - Read-Only Public Data: The `/templates` collection is globally readable by anyone but cannot be modified by clients, ensuring data integrity.
+ *
+ * # Denormalization for Authorization
+ * Path-based ownership (`/users/{userId}`) is the primary authorization mechanism. This is highly performant as it avoids extra database reads (`get()` calls) in rules. For documents within this path, we enforce that an internal ownership field (e.g., `user.id` or `project.userId`) matches the `userId` in the path. This ensures relational integrity and prevents a user from creating a document under their path but assigning it to another user.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //-------------------------------------------------------------------------
+    // Helper Functions
+    //-------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently signed-in user's UID matches the provided userId.
+     * This is the core function for validating ownership of a data tree.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update and delete operations.
+     * Ensures the operation is on a document that actually exists.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Validates ownership and relational integrity for a new User document.
+     * Ensures the document's internal `id` matches the document's path `userId`.
+     */
+    function isValidNewUser(userId) {
+      let isIdConsistent = request.resource.data.id == userId;
+      return isOwner(userId) && isIdConsistent;
+    }
+
+    /**
+     * Validates that critical relational fields for a User document are immutable on update.
+     */
+    function hasImmutableUserFields() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates ownership and relational integrity for a new Project document.
+     * Ensures the project's internal `userId` and `id` match the document's path.
+     */
+    function isValidNewProject(userId, projectId) {
+      let isUserIdConsistent = request.resource.data.userId == userId;
+      let isProjectIdConsistent = request.resource.data.id == projectId;
+      return isOwner(userId) && isUserIdConsistent && isProjectIdConsistent;
+    }
+
+    /**
+     * Validates that critical relational fields for a Project document are immutable on update.
+     */
+    function hasImmutableProjectFields() {
+      let isUserIdImmutable = request.resource.data.userId == resource.data.userId;
+      let isProjectIdImmutable = request.resource.data.id == resource.data.id;
+      return isUserIdImmutable && isProjectIdImmutable;
+    }
+
+    //-------------------------------------------------------------------------
+    // User Profile Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to a user's own profile document.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document: `auth.uid === userId`.
+     * @allow (get) An authenticated user reading their own profile.
+     * @deny (list) Any user attempting to list all user profiles to prevent user enumeration.
+     * @deny (get) An authenticated user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isValidNewUser(userId);
+      allow update: if isExistingOwner(userId) && hasImmutableUserFields();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    //-------------------------------------------------------------------------
+    // User Project Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to projects, which are nested under the user who owns them.
+     * @path /users/{userId}/projects/{projectId}
+     * @allow (create) An authenticated user creating a project in their own subcollection.
+     * @allow (list) An authenticated user listing all of their own projects.
+     * @deny (get) An authenticated user attempting to read a project owned by another user.
+     * @deny (update) Any user trying to change the `userId` of an existing project.
+     * @principle Enforces strict document ownership within a user's private subcollection.
+     */
+    match /users/{userId}/projects/{projectId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isValidNewProject(userId, projectId);
+      allow update: if isExistingOwner(userId) && hasImmutableProjectFields();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    //-------------------------------------------------------------------------
+    // Public Template Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Defines access rules for public, read-only project templates.
+     * @path /templates/{templateId}
+     * @allow (get, list) Any user, including unauthenticated users, can read templates.
+     * @deny (create, update, delete) All write operations are denied for clients to protect data integrity.
+     * @principle Provides public read access while preventing any client-side modification.
+     */
+    match /templates/{templateId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
