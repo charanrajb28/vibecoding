@@ -33,8 +33,63 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const Icon = project.icon;
 
   return (
-    <Card className="transition-all duration-300 ease-in hover:shadow-xl hover:-translate-y-1 h-full flex flex-col border border-transparent hover:border-primary">
-        <CardHeader className="flex flex-row items-start justify-between">
+    <Card 
+        className={cn(
+            "h-full flex flex-col transition-all duration-300 ease-in-out",
+            "bg-card text-card-foreground shadow-sm",
+            "relative", // Needed for pseudo-element positioning
+            "group" // Needed for group-hover state
+        )}
+    >
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
+             style={{
+                 backgroundSize: '200% 1px',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundPosition: '100% 0%',
+                 transition: 'background-position 0.5s ease-in-out',
+             }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
+             style={{
+                 backgroundSize: '1px 200%',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundPosition: '100% 100%',
+                 transition: 'background-position 0.5s ease-in-out .25s',
+             }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
+             style={{
+                 backgroundSize: '200% 1px',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundPosition: '0% 100%',
+                 transition: 'background-position 0.5s ease-in-out .5s',
+             }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
+             style={{
+                 backgroundSize: '1px 200%',
+                 backgroundRepeat: 'no-repeat',
+                 backgroundPosition: '0% 0%',
+                 transition: 'background-position 0.5s ease-in-out .75s',
+             }}
+        />
+        
+        <style jsx>{`
+            .group:hover .absolute {
+                background-position: 0% 0%;
+            }
+             .group:hover .absolute:nth-of-type(2) {
+                background-position: 100% 0%;
+            }
+             .group:hover .absolute:nth-of-type(3) {
+                background-position: 100% 100%;
+            }
+             .group:hover .absolute:nth-of-type(4) {
+                background-position: 0% 100%;
+            }
+        `}</style>
+
+        <CardHeader className="flex flex-row items-start justify-between z-10">
         <div>
             <CardTitle className="text-lg font-semibold">
             <Link href={`/project/${project.id}`} className="hover:underline">
@@ -68,7 +123,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             </DropdownMenuContent>
         </DropdownMenu>
         </CardHeader>
-        <CardContent className="flex-grow">
+        <CardContent className="flex-grow z-10">
         <div className="flex items-center space-x-2">
             <span
             className={cn('h-2 w-2 rounded-full', statusClasses[project.status])}
@@ -79,7 +134,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             </Badge>
         </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="z-10">
         <p className="text-sm text-muted-foreground">Last updated {project.lastUpdated}</p>
         </CardFooter>
     </Card>
