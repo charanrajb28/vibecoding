@@ -7,8 +7,10 @@ export default function AppLayout({
 }>) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-7xl px-4 sm:px-6 lg:px-8">
-        <AppHeader />
+      <div className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-7xl items-center">
+            <AppHeader />
+        </div>
       </div>
       <main className="container w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {children}
