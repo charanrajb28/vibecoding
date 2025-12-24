@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Github, Gitlab } from 'lucide-react';
+import { Github } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -16,8 +18,57 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Logo } from '@/components/logo';
+import { useAuth } from '@/firebase';
+import {
+  initiateEmailSignUp,
+  initiateEmailSignIn,
+} from '@/firebase/non-blocking-login';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AuthCard() {
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [emailSignIn, setEmailSignIn] = useState('');
+  const [passwordSignIn, setPasswordSignIn] = useState('');
+  const [emailSignUp, setEmailSignUp] = useState('');
+  const [passwordSignUp, setPasswordSignUp] = useState('');
+
+  const handleSignIn = async () => {
+    try {
+      initiateEmailSignIn(auth, emailSignIn, passwordSignIn);
+      toast({
+        title: 'Signed In',
+        description: 'You have successfully signed in.',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign In Failed',
+        description: error.message,
+      });
+    }
+  };
+
+  const handleSignUp = async () => {
+    try {
+      initiateEmailSignUp(auth, emailSignUp, passwordSignUp);
+      toast({
+        title: 'Signed Up',
+        description: 'Your account has been created.',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: error.message,
+      });
+    }
+  };
+
   return (
     <Tabs defaultValue="sign-in" className="w-full max-w-md">
       <Card className="shadow-2xl">
@@ -36,30 +87,52 @@ export default function AuthCard() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email-signin">Email</Label>
-              <Input id="email-signin" type="email" placeholder="m@example.com" />
+              <Input
+                id="email-signin"
+                type="email"
+                placeholder="m@example.com"
+                value={emailSignIn}
+                onChange={(e) => setEmailSignIn(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password-signin">Password</Label>
-              <Input id="password-signin" type="password" />
+              <Input
+                id="password-signin"
+                type="password"
+                value={passwordSignIn}
+                onChange={(e) => setPasswordSignIn(e.target.value)}
+              />
             </div>
-            <Link href="/dashboard" className="w-full">
-              <Button className="w-full">Sign In</Button>
-            </Link>
+            <Button className="w-full" onClick={handleSignIn}>
+              Sign In
+            </Button>
           </CardContent>
         </TabsContent>
         <TabsContent value="sign-up">
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email-signup">Email</Label>
-              <Input id="email-signup" type="email" placeholder="m@example.com" />
+              <Input
+                id="email-signup"
+                type="email"
+                placeholder="m@example.com"
+                value={emailSignUp}
+                onChange={(e) => setEmailSignUp(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password-signup">Password</Label>
-              <Input id="password-signup" type="password" />
+              <Input
+                id="password-signup"
+                type="password"
+                value={passwordSignUp}
+                onChange={(e) => setPasswordSignUp(e.target.value)}
+              />
             </div>
-            <Link href="/dashboard" className="w-full">
-              <Button className="w-full">Create Account</Button>
-            </Link>
+            <Button className="w-full" onClick={handleSignUp}>
+              Create Account
+            </Button>
           </CardContent>
         </TabsContent>
         <CardFooter className="flex flex-col gap-4">
