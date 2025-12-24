@@ -55,15 +55,21 @@ service cloud.firestore {
      * Ensures the document's internal `id` matches the document's path `userId`.
      */
     function isValidNewUser(userId) {
-      let isIdConsistent = request.resource.data.id == userId;
-      return isOwner(userId) && isIdConsistent;
+      let incomingData = request.resource.data;
+      let isIdConsistent = incomingData.id == userId;
+      let hasRequiredFields = incomingData.fullName is string && incomingData.fullName.size() > 0
+                              && incomingData.username is string && incomingData.username.size() > 0
+                              && incomingData.email is string;
+      return isOwner(userId) && isIdConsistent && hasRequiredFields;
     }
 
     /**
      * Validates that critical relational fields for a User document are immutable on update.
      */
     function hasImmutableUserFields() {
-      return request.resource.data.id == resource.data.id;
+      return request.resource.data.id == resource.data.id &&
+             request.resource.data.email == resource.data.email &&
+             request.resource.data.createdAt == resource.data.createdAt;
     }
 
     /**

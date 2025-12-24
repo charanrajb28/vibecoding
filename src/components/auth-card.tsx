@@ -21,16 +21,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Logo } from '@/components/logo';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AuthCard() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
   const [emailSignIn, setEmailSignIn] = useState('');
   const [passwordSignIn, setPasswordSignIn] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [emailSignUp, setEmailSignUp] = useState('');
   const [passwordSignUp, setPasswordSignUp] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -58,10 +64,34 @@ export default function AuthCard() {
   };
 
   const handleSignUp = async () => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsSigningUp(true);
     try {
-      await createUserWithEmailAndPassword(auth, emailSignUp, passwordSignUp);
+      const userCredential = await createUserWithEmailAndPassword(auth, emailSignUp, passwordSignUp);
+      const user = userCredential.user;
+
+      if (user) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const userData = {
+          id: user.uid,
+          email: emailSignUp,
+          fullName: fullName,
+          username: username,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        // Use non-blocking write with error handling
+        setDoc(userRef, userData).catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'create',
+            requestResourceData: userData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+      }
+
       toast({
         title: 'Signed Up',
         description: 'Your account has been created. Signing you in...',
@@ -122,6 +152,28 @@ export default function AuthCard() {
         </TabsContent>
         <TabsContent value="sign-up">
           <CardContent className="space-y-4">
+             <div className="space-y-2">
+              <Label htmlFor="fullname-signup">Full Name</Label>
+              <Input
+                id="fullname-signup"
+                type="text"
+                placeholder="John Doe"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={isSigningUp}
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="username-signup">Username</Label>
+              <Input
+                id="username-signup"
+                type="text"
+                placeholder="johndoe"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isSigningUp}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email-signup">Email</Label>
               <Input
