@@ -15,6 +15,7 @@ interface ResizablePanelGroupContextProps {
   direction: Direction
   panels: React.RefObject<HTMLDivElement>[]
   sizes: number[]
+  minSizes: (number | undefined)[]
   setSizes: React.Dispatch<React.SetStateAction<number[]>>
 }
 
@@ -48,6 +49,16 @@ const ResizablePanelGroup = ({
   const panels = React.useRef<React.RefObject<HTMLDivElement>[]>(
     React.Children.map(children, () => React.createRef())
   ).current
+
+  const minSizes = React.useMemo(() => 
+    React.Children.map(children, child => {
+      if (React.isValidElement(child) && child.type === ResizablePanel) {
+        return child.props.minSize;
+      }
+      return undefined;
+    }).filter(el => el !== undefined) as (number | undefined)[]
+  , [children]);
+
 
   React.useEffect(() => {
     const childArray = React.Children.toArray(children);
@@ -86,7 +97,7 @@ const ResizablePanelGroup = ({
 
   return (
     <ResizablePanelGroupContext.Provider
-      value={{ groupId, direction, panels, sizes, setSizes: handleSetSizes }}
+      value={{ groupId, direction, panels, sizes, setSizes: handleSetSizes, minSizes }}
     >
       <div
         className={cn(
@@ -147,7 +158,7 @@ const ResizableHandle = ({
   handleIndex,
   ...props
 }: { className?: string, handleIndex?: number } & React.HTMLAttributes<HTMLDivElement>) => {
-  const { direction, setSizes, panels } = useResizablePanelGroup()
+  const { direction, setSizes, minSizes } = useResizablePanelGroup()
   const handleRef = React.useRef<HTMLDivElement>(null)
 
   const onDrag = React.useCallback(
@@ -187,13 +198,8 @@ const ResizableHandle = ({
           let newPrevSize = deltaPercent;
           let newNextSize = totalSize - newPrevSize;
           
-          // Get minSize from props of ResizablePanel
-          const childArray = React.Children.toArray(parentElement.props.children);
-          const prevPanelElement = childArray[prevPanelIndex * 2] as React.ReactElement;
-          const nextPanelElement = childArray[nextPanelIndex * 2] as React.ReactElement;
-          
-          const minPrev = (prevPanelElement.props.minSize || 5);
-          const minNext = (nextPanelElement.props.minSize || 5);
+          const minPrev = minSizes[prevPanelIndex] ?? 5;
+          const minNext = minSizes[nextPanelIndex] ?? 5;
 
           if(newPrevSize < minPrev) {
               newNextSize += newPrevSize - minPrev;
@@ -211,7 +217,7 @@ const ResizableHandle = ({
           return newSizes;
       })
     },
-    [direction, setSizes, handleIndex]
+    [direction, setSizes, handleIndex, minSizes]
   )
 
   const onDragEnd = React.useCallback(() => {
