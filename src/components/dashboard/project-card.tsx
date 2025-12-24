@@ -17,12 +17,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, Edit, PlayCircle } from 'lucide-react';
+import { MoreVertical, Trash2, Edit, PlayCircle, Component, Server } from 'lucide-react';
 import type { Project } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
+import React from 'react';
 
 type ProjectCardProps = {
   project: Project;
+  iconName: string;
 };
 
 const statusClasses = {
@@ -31,8 +33,14 @@ const statusClasses = {
   error: 'bg-red-500',
 };
 
-export default function ProjectCard({ project }: ProjectCardProps) {
-  const Icon = project.icon;
+const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  component: Component,
+  server: Server,
+};
+
+
+export default function ProjectCard({ project, iconName }: ProjectCardProps) {
+  const Icon = iconMap[iconName] || Component;
 
   return (
     <Card 
@@ -40,57 +48,15 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             "h-full flex flex-col transition-all duration-300 ease-in-out",
             "bg-card text-card-foreground shadow-sm",
             "relative", // Needed for pseudo-element positioning
+            "border-border hover:border-primary",
             "group" // Needed for group-hover state
         )}
     >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
-             style={{
-                 backgroundSize: '200% 1px',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundPosition: '100% 0%',
-                 transition: 'background-position 0.5s ease-in-out',
-             }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
-             style={{
-                 backgroundSize: '1px 200%',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundPosition: '100% 100%',
-                 transition: 'background-position 0.5s ease-in-out .25s',
-             }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
-             style={{
-                 backgroundSize: '200% 1px',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundPosition: '0% 100%',
-                 transition: 'background-position 0.5s ease-in-out .5s',
-             }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-primary group-hover:to-primary/50 rounded-lg"
-             style={{
-                 backgroundSize: '1px 200%',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundPosition: '0% 0%',
-                 transition: 'background-position 0.5s ease-in-out .75s',
-             }}
-        />
+      <div
+        className="absolute top-0 left-0 h-full w-full rounded-lg bg-gradient-to-r from-primary via-primary to-transparent bg-[length:200%_100%] bg-right transition-all duration-300 ease-in-out group-hover:bg-left"
+        style={{ backgroundSize: '200% 1px', backgroundRepeat: 'no-repeat' }}
+      ></div>
         
-        <style jsx>{`
-            .group:hover .absolute {
-                background-position: 0% 0%;
-            }
-             .group:hover .absolute:nth-of-type(2) {
-                background-position: 100% 0%;
-            }
-             .group:hover .absolute:nth-of-type(3) {
-                background-position: 100% 100%;
-            }
-             .group:hover .absolute:nth-of-type(4) {
-                background-position: 0% 100%;
-            }
-        `}</style>
-
         <CardHeader className="flex flex-row items-start justify-between z-10">
         <div>
             <CardTitle className="text-lg font-semibold">

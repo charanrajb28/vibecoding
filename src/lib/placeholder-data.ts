@@ -4,7 +4,7 @@ export type Project = {
   framework: string;
   lastUpdated: string;
   status: 'online' | 'offline' | 'error';
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
 };
 
 export type Template = {
@@ -22,7 +22,6 @@ export type FileNode = {
   content?: string;
 };
 
-import { Code, Component, FileText, Folder, Image as ImageIcon, Settings, Server } from 'lucide-react';
 import React from 'react';
 
 export const projects: Project[] = [
@@ -32,7 +31,7 @@ export const projects: Project[] = [
     framework: 'Next.js',
     lastUpdated: '2 hours ago',
     status: 'online',
-    icon: Component
+    icon: 'component'
   },
   {
     id: '2',
@@ -40,7 +39,7 @@ export const projects: Project[] = [
     framework: 'Node.js',
     lastUpdated: '5 hours ago',
     status: 'online',
-    icon: Server
+    icon: 'server'
   },
   {
     id: '3',
@@ -48,7 +47,7 @@ export const projects: Project[] = [
     framework: 'React',
     lastUpdated: '1 day ago',
     status: 'offline',
-    icon: Component
+    icon: 'component'
   },
   {
     id: '4',
@@ -56,7 +55,7 @@ export const projects: Project[] = [
     framework: 'Node.js',
     lastUpdated: '3 days ago',
     status: 'error',
-    icon: Server
+    icon: 'server'
   },
   {
     id: '5',
@@ -64,7 +63,7 @@ export const projects: Project[] = [
     framework: 'Next.js',
     lastUpdated: '1 week ago',
     status: 'online',
-    icon: Component
+    icon: 'component'
   },
 ];
 
