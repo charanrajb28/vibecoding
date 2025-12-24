@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { File, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2, Code, FileJson, FileCode, Wind } from 'lucide-react';
+import { File, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2, Code, FileJson, FileCode, Wind, Braces, FileType, FileCog } from 'lucide-react';
 import { type FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import {
@@ -15,19 +15,27 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
 const getFileIcon = (fileName: string) => {
-    if (fileName.endsWith('.tsx') || fileName.endsWith('.jsx')) {
-        return <FileCode className="h-4 w-4 mr-2 flex-shrink-0 text-blue-400" />;
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+        case 'tsx':
+            return <FileCode className="h-4 w-4 mr-2 flex-shrink-0 text-cyan-400" />;
+        case 'jsx':
+            return <FileCode className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-400" />;
+        case 'ts':
+            return <FileType className="h-4 w-4 mr-2 flex-shrink-0 text-cyan-500" />;
+        case 'js':
+            return <Braces className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-500" />;
+        case 'json':
+            return <FileJson className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-600" />;
+        case 'css':
+            return <FileCode className="h-4 w-4 mr-2 flex-shrink-0 text-blue-500" />;
+        case 'md':
+            return <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-blue-300" />;
+        case 'config.ts':
+             return <FileCog className="h-4 w-4 mr-2 flex-shrink-0 text-purple-400" />;
+        default:
+            return <File className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />;
     }
-    if (fileName.endsWith('.json')) {
-        return <FileJson className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-400" />;
-    }
-    if (fileName.endsWith('.css')) {
-        return <Wind className="h-4 w-4 mr-2 flex-shrink-0 text-purple-400" />;
-    }
-    if (fileName.endsWith('.ts') || fileName.endsWith('.js')) {
-        return <Code className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-500" />;
-    }
-  return <File className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />;
 };
 
 const EditableNode = ({
@@ -176,7 +184,7 @@ const FileTree = ({
                 <ChevronRight className="h-4 w-4 mr-1 text-muted-foreground" />
               )
             ) : null}
-            {node.type === 'file' && getFileIcon(node.name)}
+            {node.type === 'file' ? getFileIcon(node.name) : null}
             <span>{node.name}</span>
           </div>
         </ContextMenuTrigger>
