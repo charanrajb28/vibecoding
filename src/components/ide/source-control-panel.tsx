@@ -1,120 +1,94 @@
 "use client"
 
-import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff } from "lucide-react";
+import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff, GitBranch, History } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { CardHeader, CardTitle } from "../ui/card";
 import { ScrollArea } from "../ui/scroll-area";
-import { Checkbox } from "../ui/checkbox";
-import { useState } from "react";
-
-const stagedChanges = [
-    { id: '1', file: 'src/components/ide-layout.tsx' },
-    { id: '2', file: 'src/app/page.tsx' },
-];
+import { Textarea } from "../ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "../ui/badge";
 
 const changes = [
-    { id: '3', file: 'tailwind.config.ts' },
-]
+    { id: '1', file: 'src/app/page.tsx', status: 'M' },
+    { id: '2', file: 'src/components/ui/button.tsx', status: 'M' },
+    { id: '3', file: 'tailwind.config.ts', status: 'A' },
+];
+
+const commits = [
+    { id: '1', message: 'feat: Implement dark mode toggle', author: 'User', time: '3 hours ago' },
+    { id: '2', message: 'fix: Resolve layout issue on mobile', author: 'User', time: '1 day ago' },
+    { id: '3', message: 'refactor: Simplify component logic', author: 'User', time: '2 days ago' },
+    { id: '4', message: 'Initial commit', author: 'User', time: '3 days ago' },
+];
 
 export default function SourceControlPanel() {
-    const [selectedChanges, setSelectedChanges] = useState<string[]>([]);
-    
-    const handleSelectAll = (isChecked: boolean | 'indeterminate') => {
-        if(isChecked === true) {
-            setSelectedChanges([...stagedChanges.map(c => c.id), ...changes.map(c => c.id)])
-        } else {
-            setSelectedChanges([]);
-        }
-    }
-    
-    const allSelected = selectedChanges.length > 0 && selectedChanges.length === (stagedChanges.length + changes.length)
-    const mixedSelected = selectedChanges.length > 0 && selectedChanges.length < (stagedChanges.length + changes.length)
+    return (
+        <div className="h-full flex flex-col bg-card text-foreground">
+            <CardHeader className="flex-shrink-0 border-b p-3">
+                <CardTitle className="text-sm font-semibold tracking-wider">SOURCE CONTROL</CardTitle>
+            </CardHeader>
 
-
-  return (
-    <div className="h-full flex flex-col bg-card">
-        <CardHeader className="flex-shrink-0 border-b flex-row items-center justify-between p-2">
-            <CardTitle className="text-sm font-medium px-2">Source Control</CardTitle>
-            <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
-                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Check className="h-4 w-4" />
-                </Button>
-                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                </Button>
-            </div>
-        </CardHeader>
-        <div className="p-2 flex-shrink-0 border-b">
-            <Input placeholder="Commit message" />
-            <div className="flex gap-2 mt-2">
-                <Button className="w-full">
-                    <GitCommit className="mr-2 h-4 w-4"/>
-                    Commit
-                </Button>
-                 <Button variant="outline" className="w-full">
-                    <GitPullRequest className="mr-2 h-4 w-4"/>
-                    Pull Request
-                </Button>
-            </div>
-        </div>
-        <ScrollArea className="flex-grow">
-            <div className="p-2 text-sm">
-                <div className="flex items-center gap-2 mb-2 px-2">
-                    <Checkbox id="select-all" 
-                        checked={allSelected ? true : mixedSelected ? 'indeterminate' : false}
-                        onCheckedChange={handleSelectAll}
+            <div className="p-3 flex-shrink-0 border-b">
+                <div className="relative">
+                    <Textarea
+                        placeholder="Message (Ctrl+Enter to commit on 'main')"
+                        className="pr-10 resize-none"
+                        rows={3}
                     />
-                    <label htmlFor="select-all" className="font-medium">Changes</label>
                 </div>
-
-                {stagedChanges.length > 0 && (
-                    <div className="mb-4">
-                        <h4 className="font-semibold text-xs text-muted-foreground px-2 mb-1">Staged Changes</h4>
-                        {stagedChanges.map(change => (
-                            <div key={change.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
-                                <Checkbox 
-                                    id={`change-${change.id}`}
-                                    checked={selectedChanges.includes(change.id)}
-                                    onCheckedChange={(checked) => {
-                                        if(checked) {
-                                            setSelectedChanges(prev => [...prev, change.id])
-                                        } else {
-                                            setSelectedChanges(prev => prev.filter(id => id !== change.id))
-                                        }
-                                    }}
-                                />
-                                <FileDiff className="h-4 w-4 text-yellow-500" />
-                                <span className="truncate">{change.file}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                 <div>
-                    <h4 className="font-semibold text-xs text-muted-foreground px-2 mb-1">Changes</h4>
-                    {changes.map(change => (
-                         <div key={change.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">
-                            <Checkbox 
-                                id={`change-${change.id}`} 
-                                checked={selectedChanges.includes(change.id)}
-                                onCheckedChange={(checked) => {
-                                    if(checked) {
-                                        setSelectedChanges(prev => [...prev, change.id])
-                                    } else {
-                                        setSelectedChanges(prev => prev.filter(id => id !== change.id))
-                                    }
-                                }}
-                            />
-                            <FileDiff className="h-4 w-4 text-blue-500" />
-                            <span className="truncate">{change.file}</span>
-                        </div>
-                    ))}
+                <Button className="w-full mt-2">
+                    <GitCommit className="mr-2 h-4 w-4" />
+                    Commit to main
+                </Button>
+                 <div className="text-xs text-center mt-2 text-muted-foreground">
+                    No staged changes.
                 </div>
             </div>
-        </ScrollArea>
-    </div>
-  )
+
+            <ScrollArea className="flex-grow">
+                <Accordion type="multiple" defaultValue={['changes', 'commits']} className="w-full">
+                    <AccordionItem value="changes">
+                        <AccordionTrigger className="text-xs font-bold uppercase text-muted-foreground px-3 py-2 tracking-wider">
+                            <div className="flex items-center">
+                                <span>Changes</span>
+                                <Badge variant="secondary" className="ml-2 rounded-full h-5 w-5 p-0 flex items-center justify-center">{changes.length}</Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-0">
+                            <div className="text-sm">
+                                {changes.map(change => (
+                                    <div key={change.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-muted group">
+                                        <FileDiff className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                        <span className="truncate flex-grow">{change.file}</span>
+                                        <Badge variant="outline" className="text-xs">{change.status}</Badge>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                             <Button variant="ghost" size="icon" className="h-6 w-6"><RefreshCw className="h-3 w-3"/></Button>
+                                             <Button variant="ghost" size="icon" className="h-6 w-6"><Check className="h-3 w-3"/></Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="commits">
+                        <AccordionTrigger className="text-xs font-bold uppercase text-muted-foreground px-3 py-2 tracking-wider">Commits</AccordionTrigger>
+                        <AccordionContent>
+                             <div className="text-sm space-y-2">
+                                {commits.map(commit => (
+                                    <div key={commit.id} className="flex items-start gap-2 px-3 py-1.5 rounded-md hover:bg-muted">
+                                        <History className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0"/>
+                                        <div className="flex-grow">
+                                            <p className="truncate">{commit.message}</p>
+                                            <p className="text-xs text-muted-foreground">{commit.author} committed {commit.time}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </ScrollArea>
+        </div>
+    )
 }
