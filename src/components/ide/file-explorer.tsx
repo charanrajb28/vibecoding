@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { File, Folder, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2 } from 'lucide-react';
+import { File, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2, Code, FileJson, FileCode, Wind } from 'lucide-react';
 import { type FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import {
@@ -15,7 +15,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
 const getFileIcon = (fileName: string) => {
-  // Add more file type checks here if needed
+    if (fileName.endsWith('.tsx') || fileName.endsWith('.jsx')) {
+        return <FileCode className="h-4 w-4 mr-2 flex-shrink-0 text-blue-400" />;
+    }
+    if (fileName.endsWith('.json')) {
+        return <FileJson className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-400" />;
+    }
+    if (fileName.endsWith('.css')) {
+        return <Wind className="h-4 w-4 mr-2 flex-shrink-0 text-purple-400" />;
+    }
+    if (fileName.endsWith('.ts') || fileName.endsWith('.js')) {
+        return <Code className="h-4 w-4 mr-2 flex-shrink-0 text-yellow-500" />;
+    }
   return <File className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />;
 };
 
@@ -54,7 +65,7 @@ const EditableNode = ({
 
   return (
     <div className="flex items-center py-1.5 pr-1">
-        {isFolder ? <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" /> : getFileIcon(name)}
+        {!isFolder && getFileIcon(name)}
       <Input
         ref={inputRef}
         value={name}
@@ -165,9 +176,7 @@ const FileTree = ({
                 <ChevronRight className="h-4 w-4 mr-1 text-muted-foreground" />
               )
             ) : null}
-            {node.type === 'folder' 
-              ? <Folder className={cn("h-4 w-4 mr-2 flex-shrink-0", isExpanded ? "text-primary" : "text-muted-foreground")} /> 
-              : getFileIcon(node.name)}
+            {node.type === 'file' && getFileIcon(node.name)}
             <span>{node.name}</span>
           </div>
         </ContextMenuTrigger>
