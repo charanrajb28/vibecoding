@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Wand2, Loader2, Bot, MessageSquareQuote, Send } from "lucide-react"
+import { Wand2, Loader2, Bot, MessageSquareQuote, Send, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +24,16 @@ export default function AiToolsPanel() {
   ]);
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages, isLoading]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,14 +59,14 @@ export default function AiToolsPanel() {
   return (
     <div className="h-full flex flex-col bg-card">
       <CardHeader className="flex-shrink-0 border-b">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <Bot className="h-5 w-5" />
           AI Assistant
         </CardTitle>
       </CardHeader>
-      <div className="flex-grow flex flex-col">
-        <ScrollArea className="flex-grow p-4">
-          <div className="space-y-4">
+      <div className="flex-grow flex flex-col overflow-hidden">
+        <ScrollArea className="flex-grow" ref={scrollAreaRef}>
+          <div className="p-4 space-y-6">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -65,14 +75,18 @@ export default function AiToolsPanel() {
                   message.role === 'user' && "justify-end"
                 )}
               >
-                {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>AI</AvatarFallback>
+                {message.role === 'assistant' ? (
+                  <Avatar className="h-8 w-8 border">
+                    <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Avatar className="h-8 w-8 border">
+                     <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
                   </Avatar>
                 )}
                 <div
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm max-w-xs md:max-w-md",
+                    "rounded-lg px-3 py-2 text-sm max-w-[80%]",
                     message.role === 'user' 
                       ? "bg-primary text-primary-foreground" 
                       : "bg-muted"
@@ -80,12 +94,17 @@ export default function AiToolsPanel() {
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
                 </div>
+                 {message.role === 'user' && (
+                   <Avatar className="h-8 w-8 border">
+                     <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
+                  </Avatar>
+                )}
               </div>
             ))}
             {isLoading && (
                 <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarFallback>AI</AvatarFallback>
+                    <Avatar className="h-8 w-8 border">
+                        <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
                     </Avatar>
                     <div className="rounded-lg px-3 py-2 text-sm bg-muted flex items-center">
                         <Loader2 className="h-4 w-4 animate-spin"/>
@@ -94,17 +113,23 @@ export default function AiToolsPanel() {
             )}
           </div>
         </ScrollArea>
-        <div className="border-t p-2 flex-shrink-0">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+        <div className="border-t p-4 flex-shrink-0 bg-card">
+          <form onSubmit={handleSendMessage} className="relative">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask the AI something..."
-              className="flex-grow"
+              placeholder="Ask the AI anything..."
+              className="pr-12"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Button 
+              type="submit" 
+              size="icon" 
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7"
+              disabled={isLoading || !input.trim()}
+            >
               <Send className="h-4 w-4" />
+              <span className="sr-only">Send message</span>
             </Button>
           </form>
         </div>
