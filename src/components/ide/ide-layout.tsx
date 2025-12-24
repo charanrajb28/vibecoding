@@ -42,8 +42,8 @@ const getAllChildFilePaths = (node: FileNode): string[] => {
 
 const addPathsToTree = (nodes: FileNode[], parentPath = ''): FileNode[] => {
   return nodes.map(node => {
-    // For root level, path should start with /
-    const path = parentPath ? `${parentPath}/${node.name}` : `/${node.name}`;
+    // For root level, path should not start with /
+    const path = parentPath ? `${parentPath}/${node.name}` : `${node.name}`;
     const newNode = { ...node, path };
     if (newNode.children) {
       newNode.children = addPathsToTree(newNode.children, path);
@@ -67,7 +67,9 @@ const deleteNode = (nodes: FileNode[], path: string): FileNode[] => {
 const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): FileNode[] => {
     return nodes.map(node => {
         if (node.path === parentPath) {
-            return { ...node, children: [...(node.children || []), newNode] };
+            // Check if children array exists, if not create it
+            const children = node.children ? [...node.children, newNode] : [newNode];
+            return { ...node, children: children };
         }
         if (node.children) {
             return { ...node, children: addNode(node.children, parentPath, newNode) };
@@ -83,8 +85,8 @@ export type BottomPanel = 'terminal' | 'webview';
 export default function IdeLayout() {
   const { toast } = useToast();
   const [fileTree, setFileTree] = React.useState<FileNode[]>(() => addPathsToTree(initialFileTree));
-  const [openFiles, setOpenFiles] = React.useState<string[]>(['/app/page.tsx']);
-  const [activeFile, setActiveFile] = React.useState<string | null>('/app/page.tsx');
+  const [openFiles, setOpenFiles] = React.useState<string[]>(['app/page.tsx']);
+  const [activeFile, setActiveFile] = React.useState<string | null>('app/page.tsx');
   const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
   const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel>('terminal');
 
@@ -112,7 +114,7 @@ export default function IdeLayout() {
 
   const handleRename = (oldPath: string, newName: string) => {
     const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
-    const newPath = `${parentPath}/${newName}`;
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
 
     if (findNode(fileTree, newPath)) {
         toast({ title: "Error", description: "A file or folder with that name already exists.", variant: "destructive" });
@@ -142,14 +144,11 @@ export default function IdeLayout() {
             renamedNode.children = updateChildrenPaths(renamedNode.children, oldPath, newPath);
         }
         
-        let rootPath = parentPath;
-        if (!rootPath) {
-          const treeWithNode = [...tempTree, renamedNode];
-          return treeWithNode;
+        if (!parentPath) {
+          return [...tempTree, renamedNode];
         }
 
-        const finalTree = addNode(tempTree, rootPath, renamedNode);
-
+        const finalTree = addNode(tempTree, parentPath, renamedNode);
         return finalTree;
     });
 
@@ -185,31 +184,31 @@ export default function IdeLayout() {
   };
 
   const handleNewFile = (parentPath: string, newName: string) => {
-    const newPath = `${parentPath}/${newName}`;
+    const newPath = parentPath ? `${parentPath}/${newName}`: newName;
     if (findNode(fileTree, newPath)) {
       toast({ title: "Error", description: "A file with that name already exists.", variant: "destructive" });
       return;
     }
     const newNode: FileNode = { name: newName, type: 'file', path: newPath, content: '' };
-    setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
+    
+    if (!parentPath) {
+      setFileTree(prevTree => [...prevTree, newNode]);
+    } else {
+      setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
+    }
     handleFileClick(newPath); // Open the new file
     toast({ title: "Created", description: `Created file ${newName}` });
   };
 
   const handleNewFolder = (parentPath: string, newName:string) => {
-    let newPath = `${parentPath}/${newName}`;
-    // Handle creation in root
-    if(parentPath === '' || parentPath === '/') {
-        newPath = `/${newName}`;
-    }
-
+    const newPath = parentPath ? `${parentPath}/${newName}`: newName;
     if (findNode(fileTree, newPath)) {
         toast({ title: "Error", description: "A folder with that name already exists.", variant: "destructive" });
         return;
     }
     const newNode: FileNode = { name: newName, type: 'folder', path: newPath, children: [] };
     
-    if(parentPath === '' || parentPath === '/') {
+    if(!parentPath) {
        setFileTree(prevTree => [...prevTree, newNode]);
     } else {
        setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
@@ -258,15 +257,7 @@ export default function IdeLayout() {
       <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
       <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
         <ResizablePanel defaultSize={20} minSize={15}>
-          <ResizablePanelGroup direction="vertical" storageId="ide-left-panels-layout">
-            <ResizablePanel defaultSize={50} minSize={25}>
-               {renderActivePanel()}
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={50} minSize={25}>
-              <AiToolsPanel />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+           {renderActivePanel()}
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={80} minSize={30}>
