@@ -14,7 +14,7 @@ export default function IdeLayout() {
           <FileExplorer />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={55} minSize={30}>
+        <ResizablePanel defaultSize={70} minSize={30}>
           <ResizablePanelGroup direction="vertical">
             <ResizablePanel defaultSize={70} minSize={20}>
               <EditorPane />
@@ -26,7 +26,7 @@ export default function IdeLayout() {
           </ResizablePanelGroup>
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={30} minSize={20}>
+        <ResizablePanel defaultSize={15} minSize={15}>
           <AiToolsPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
