@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "nextjs_template_logo",
+      "description": "Next.js logo",
+      "imageUrl": "https://images.unsplash.com/photo-1653499676737-becf2c9562c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxuZXh0anMlMjBsb2dvfGVufDB8fHx8MTc2NjU0OTMwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nextjs logo"
+    },
+    {
+      "id": "react_template_logo",
+      "description": "React logo",
+      "imageUrl": "https://images.unsplash.com/photo-1641302109113-67653c0fd208?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cmVhY3QlMjBsb2dvfGVufDB8fHx8MTc2NjU0OTMwM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "react logo"
+    },
+    {
+      "id": "node_template_logo",
+      "description": "Node.js logo",
+      "imageUrl": "https://images.unsplash.com/photo-1653499676737-becf2c9562c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxub2RlanMlMjBsb2dvfGVufDB8fHx8MTc2NjU1NzMzOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nodejs logo"
+    },
+    {
+      "id": "vite_template_logo",
+      "description": "Vite logo",
+      "imageUrl": "https://picsum.photos/seed/vite/100/100",
+      "imageHint": "vite logo"
+    }
+  ]
 }
