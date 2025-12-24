@@ -1,6 +1,6 @@
 "use client"
 
-import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff, GitBranch, History, GitPullRequestArrow, GitMerge, CheckCircle, Plus, Tag, Archive, GitCommitHorizontal, GitBranchPlus, ArrowDown, ArrowUp, Clone, ArrowLeftRight } from "lucide-react";
+import { GitCommit, GitPullRequest, MoreHorizontal, RefreshCw, Check, FileDiff, GitBranch, History, GitPullRequestArrow, GitMerge, CheckCircle, Plus, Tag, Archive, GitCommitHorizontal, GitBranchPlus, ArrowDown, ArrowUp, Copy, ArrowLeftRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { 
     DropdownMenu, 
@@ -56,7 +56,7 @@ export default function SourceControlPanel() {
                             </DropdownMenuSub>
                             <DropdownMenuItem><GitPullRequestArrow className="mr-2"/>Pull</DropdownMenuItem>
                             <DropdownMenuItem><ArrowUp className="mr-2" />Push</DropdownMenuItem>
-                            <DropdownMenuItem><Clone className="mr-2"/>Clone</DropdownMenuItem>
+                            <DropdownMenuItem><Copy className="mr-2"/>Clone</DropdownMenuItem>
                             <DropdownMenuItem><GitBranchPlus className="mr-2"/>Checkout to...</DropdownMenuItem>
                             <DropdownMenuItem><ArrowDown className="mr-2"/>Fetch</DropdownMenuItem>
                             <DropdownMenuSeparator />
