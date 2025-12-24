@@ -23,13 +23,13 @@ export default function NewProjectPage() {
 
   return (
     <>
-      <div className="container py-8">
+      <div className="container py-8 mx-auto w-full">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold tracking-tight">Create a New Project</h1>
           <p className="text-muted-foreground mt-2">Start from a template or import your own code.</p>
         </div>
 
-        <Tabs defaultValue="templates" className="w-full max-w-4xl mx-auto">
+        <Tabs defaultValue="templates" className="w-[80%]  mx-auto">
           <TabsList className="grid max-w-md mx-auto w-full grid-cols-2">
             <TabsTrigger value="templates">Choose a Template</TabsTrigger>
             <TabsTrigger value="import">Import from Git</TabsTrigger>

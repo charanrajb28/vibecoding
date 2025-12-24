@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, RefreshCw, ArrowLeft, ArrowRight, Home } from 'lucide-react';
+import { Globe, RefreshCw, ArrowLeft, ArrowRight, Home, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import * as React from 'react';
@@ -29,6 +29,10 @@ export default function WebView() {
   const goBack = () => iframeRef.current?.contentWindow?.history.back();
   const goForward = () => iframeRef.current?.contentWindow?.history.forward();
   const goHome = () => setIframeSrc('http://localhost:9002');
+  
+  const openInNewTab = () => {
+    window.open(iframeSrc, '_blank');
+  };
 
 
   return (
@@ -47,6 +51,9 @@ export default function WebView() {
             onKeyDown={handleKeyDown}
           />
         </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openInNewTab}>
+            <ExternalLink className="h-4 w-4" />
+        </Button>
       </div>
       <div className="flex-grow bg-white">
         <iframe
