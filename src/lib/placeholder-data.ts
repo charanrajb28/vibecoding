@@ -17,6 +17,7 @@ export type Template = {
 export type FileNode = {
   name: string;
   type: 'file' | 'folder';
+  path?: string; // Add path property
   children?: FileNode[];
   content?: string;
 };
