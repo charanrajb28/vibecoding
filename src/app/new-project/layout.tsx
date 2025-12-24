@@ -7,7 +7,9 @@ export default function NewProjectLayout({
 }>) {
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <div className="container max-w-7xl px-4 sm:px-6 lg:px-8">
+        <AppHeader />
+      </div>
       <main>{children}</main>
     </div>
   );
