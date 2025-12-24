@@ -36,10 +36,12 @@ const ResizablePanelGroup = ({
   direction,
   className,
   children,
+  storageId,
 }: {
   direction: Direction
   className?: string
   children: React.ReactNode
+  storageId?: string
 }) => {
   const groupId = React.useId()
   const [sizes, setSizes] = React.useState<number[]>([])
@@ -48,19 +50,43 @@ const ResizablePanelGroup = ({
   ).current
 
   React.useEffect(() => {
-    const childArray = React.Children.toArray(children)
-    const initialSizes = childArray.map((child) => {
+    const childArray = React.Children.toArray(children);
+    let initialSizes = childArray.map((child) => {
       if (React.isValidElement(child) && child.props.defaultSize) {
         return child.props.defaultSize
       }
-      return 100 / childArray.length
-    })
+      return 100 / childArray.filter(c => React.isValidElement(c) && c.type === ResizablePanel).length
+    });
+
+    if (storageId && typeof window !== 'undefined') {
+        const storedSizes = localStorage.getItem(storageId);
+        if (storedSizes) {
+            try {
+                const parsedSizes = JSON.parse(storedSizes);
+                if (Array.isArray(parsedSizes) && parsedSizes.length === initialSizes.length) {
+                    initialSizes = parsedSizes;
+                }
+            } catch (e) {
+                console.error("Failed to parse stored panel sizes:", e);
+            }
+        }
+    }
     setSizes(initialSizes)
-  }, [children])
+  }, [children, storageId])
+
+  const handleSetSizes = React.useCallback((newSizes: number[] | ((prev: number[]) => number[])) => {
+    setSizes(prevSizes => {
+        const resolvedSizes = typeof newSizes === 'function' ? newSizes(prevSizes) : newSizes;
+        if (storageId && typeof window !== 'undefined') {
+            localStorage.setItem(storageId, JSON.stringify(resolvedSizes));
+        }
+        return resolvedSizes;
+    });
+  }, [storageId]);
 
   return (
     <ResizablePanelGroupContext.Provider
-      value={{ groupId, direction, panels, sizes, setSizes }}
+      value={{ groupId, direction, panels, sizes, setSizes: handleSetSizes }}
     >
       <div
         className={cn(
@@ -69,7 +95,16 @@ const ResizablePanelGroup = ({
           className
         )}
       >
-        {children}
+        {React.Children.map(children, (child, index) => {
+            if (!React.isValidElement(child)) return null;
+            if (child.type === ResizablePanel) {
+                return React.cloneElement(child as React.ReactElement<any>, { panelIndex: Math.floor(index / 2) });
+            }
+            if (child.type === ResizableHandle) {
+                return React.cloneElement(child as React.ReactElement<any>, { handleIndex: Math.floor((index - 1) / 2) });
+            }
+            return child;
+        })}
       </div>
     </ResizablePanelGroupContext.Provider>
   )
@@ -79,35 +114,29 @@ const ResizablePanel = ({
   children,
   className,
   defaultSize,
+  panelIndex,
+  minSize,
   ...props
 }: {
   children: React.ReactNode
   className?: string
   defaultSize?: number
+  panelIndex?: number
+  minSize?: number
 } & React.HTMLAttributes<HTMLDivElement>) => {
-  const { direction, panels, sizes } = useResizablePanelGroup()
-  const panelRef = React.useRef<HTMLDivElement>(null)
+  const { sizes } = useResizablePanelGroup()
+  const ref = React.useRef<HTMLDivElement>(null)
   
-  const panelIndex = React.useMemo(() => {
-    const index = panels.findIndex((p) => p.current === panelRef.current)
-    return index > -1 ? index : 0
-  }, [panels, panelRef, sizes])
-  
-  React.useEffect(() => {
-    const index = panels.findIndex((p) => p.current === null)
-    if(index !== -1 && panelRef.current) {
-        panels[index] = panelRef
-    }
-  }, [panels, panelRef])
-
+  const size = sizes[panelIndex!] ?? defaultSize;
   const style: React.CSSProperties = {
-    flexGrow: sizes[panelIndex] || defaultSize || 1,
+    flexGrow: size,
     flexBasis: 0,
+    flexShrink: 0,
     overflow: 'hidden'
   }
 
   return (
-    <div ref={panelRef} className={cn("overflow-hidden", className)} style={style} {...props}>
+    <div ref={ref} className={cn("overflow-hidden", className)} style={style} {...props}>
       {children}
     </div>
   )
@@ -115,61 +144,65 @@ const ResizablePanel = ({
 
 const ResizableHandle = ({
   className,
+  handleIndex,
   ...props
-}: { className?: string } & React.HTMLAttributes<HTMLDivElement>) => {
-  const { direction, setSizes } = useResizablePanelGroup()
+}: { className?: string, handleIndex?: number } & React.HTMLAttributes<HTMLDivElement>) => {
+  const { direction, setSizes, panels } = useResizablePanelGroup()
   const handleRef = React.useRef<HTMLDivElement>(null)
-  const isDragging = React.useRef(false)
 
   const onDrag = React.useCallback(
     (e: MouseEvent) => {
-      if (!isDragging.current || !handleRef.current) return
+      if (!handleRef.current) return;
 
-      const handleElement = handleRef.current
-      const parentElement = handleElement.parentElement
-      if (!parentElement) return
+      const handleElement = handleRef.current;
+      const parentElement = handleElement.parentElement;
+      if (!parentElement) return;
       
-      const rect = parentElement.getBoundingClientRect()
+      const prevPanelIndex = handleIndex!;
+      const nextPanelIndex = handleIndex! + 1;
+
+      const prevPanel = parentElement.children[prevPanelIndex * 2] as HTMLElement;
+      const nextPanel = parentElement.children[nextPanelIndex * 2] as HTMLElement;
+
+      if (!prevPanel || !nextPanel) return;
       
-      let delta
+      const rect = parentElement.getBoundingClientRect();
+      const handleRect = handleElement.getBoundingClientRect();
+
+      let delta;
+      const parentSize = direction === 'horizontal' ? rect.width : rect.height;
+      
       if (direction === "horizontal") {
-        delta = e.clientX - (handleElement.dataset.startPos ? parseFloat(handleElement.dataset.startPos) : e.clientX)
-        handleElement.dataset.startPos = `${e.clientX}`
+        delta = e.clientX - handleRect.left;
       } else {
-        delta = e.clientY - (handleElement.dataset.startPos ? parseFloat(handleElement.dataset.startPos) : e.clientY)
-        handleElement.dataset.startPos = `${e.clientY}`
+        delta = e.clientY - handleRect.top;
       }
 
       setSizes(prevSizes => {
-          const handleIndex = Array.from(parentElement.children).indexOf(handleElement)
-          const prevPanelIndex = Math.floor((handleIndex -1) / 2);
-          const nextPanelIndex = prevPanelIndex + 1;
-          
-          if (prevSizes[prevPanelIndex] === undefined || prevSizes[nextPanelIndex] === undefined) {
-              return prevSizes;
-          }
-          
           const totalSize = prevSizes[prevPanelIndex] + prevSizes[nextPanelIndex];
-
-          const parentSize = direction === 'horizontal' ? rect.width : rect.height;
-          const deltaPercent = (delta / parentSize) * 100;
+          const prevPanelSize = (direction === 'horizontal' ? prevPanel.offsetWidth : prevPanel.offsetHeight);
           
-          let newPrevSize = prevSizes[prevPanelIndex] + deltaPercent;
-          let newNextSize = prevSizes[nextPanelIndex] - deltaPercent;
+          const deltaPercent = ((prevPanelSize + delta) / parentSize) * totalSize;
+
+          let newPrevSize = deltaPercent;
+          let newNextSize = totalSize - newPrevSize;
           
-          const minSize = 5; // minimum 5%
+          // Get minSize from props of ResizablePanel
+          const childArray = React.Children.toArray(parentElement.props.children);
+          const prevPanelElement = childArray[prevPanelIndex * 2] as React.ReactElement;
+          const nextPanelElement = childArray[nextPanelIndex * 2] as React.ReactElement;
+          
+          const minPrev = (prevPanelElement.props.minSize || 5);
+          const minNext = (nextPanelElement.props.minSize || 5);
 
-          if(newPrevSize < minSize) {
-              newNextSize += newPrevSize - minSize;
-              newPrevSize = minSize;
+          if(newPrevSize < minPrev) {
+              newNextSize += newPrevSize - minPrev;
+              newPrevSize = minPrev;
           }
-          if(newNextSize < minSize) {
-              newPrevSize += newNextSize - minSize;
-              newNextSize = minSize;
+          if(newNextSize < minNext) {
+              newPrevSize += newNextSize - minNext;
+              newNextSize = minNext;
           }
-
-          if (newPrevSize > totalSize - minSize) newPrevSize = totalSize - minSize;
-          if (newNextSize > totalSize - minSize) newNextSize = totalSize - minSize;
 
           const newSizes = [...prevSizes];
           newSizes[prevPanelIndex] = newPrevSize;
@@ -177,29 +210,22 @@ const ResizableHandle = ({
 
           return newSizes;
       })
-
     },
-    [direction, setSizes]
+    [direction, setSizes, handleIndex]
   )
 
   const onDragEnd = React.useCallback(() => {
-    isDragging.current = false
     document.removeEventListener("mousemove", onDrag)
     document.removeEventListener("mouseup", onDragEnd)
-    if(handleRef.current) handleRef.current.removeAttribute('data-start-pos');
   }, [onDrag])
 
   const onDragStart = React.useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
-      isDragging.current = true
-      if(handleRef.current) {
-        handleRef.current.dataset.startPos = `${direction === 'horizontal' ? e.clientX : e.clientY}`;
-      }
       document.addEventListener("mousemove", onDrag)
       document.addEventListener("mouseup", onDragEnd)
     },
-    [direction, onDrag, onDragEnd]
+    [onDrag, onDragEnd]
   )
 
   return (

@@ -12,6 +12,7 @@ import EditorPane from './editor-pane';
 import TerminalPane from './terminal-pane';
 import { fileTree as initialFileTree, type FileNode } from '@/lib/placeholder-data';
 import { useToast } from "@/hooks/use-toast";
+import AiToolsPanel from "./ai-tools-panel";
 
 // Helper to find a node in the tree
 const findNode = (nodes: FileNode[], path: string): FileNode | null => {
@@ -23,42 +24,6 @@ const findNode = (nodes: FileNode[], path: string): FileNode | null => {
     }
   }
   return null;
-};
-
-// Helper to update a node in the tree
-const updateNode = (nodes: FileNode[], path: string, updates: Partial<FileNode>): FileNode[] => {
-  return nodes.map(node => {
-    if (node.path === path) {
-      return { ...node, ...updates };
-    }
-    if (node.children) {
-      return { ...node, children: updateNode(node.children, path, updates) };
-    }
-    return node;
-  });
-};
-
-// Helper to add a node to the tree
-const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): FileNode[] => {
-    return nodes.map(node => {
-        if (node.path === parentPath) {
-            return { ...node, children: [...(node.children || []), newNode] };
-        }
-        if (node.children) {
-            return { ...node, children: addNode(node.children, parentPath, newNode) };
-        }
-        return node;
-    });
-};
-
-// Helper to delete a node from the tree
-const deleteNode = (nodes: FileNode[], path: string): FileNode[] => {
-    return nodes.filter(node => node.path !== path).map(node => {
-        if (node.children) {
-            return { ...node, children: deleteNode(node.children, path) };
-        }
-        return node;
-    });
 };
 
 // Helper to recursively get all child file paths
@@ -82,6 +47,30 @@ const addPathsToTree = (nodes: FileNode[], parentPath = ''): FileNode[] => {
     }
     return newNode;
   });
+};
+
+// Helper to delete a node from the tree
+const deleteNode = (nodes: FileNode[], path: string): FileNode[] => {
+    return nodes.filter(node => node.path !== path).map(node => {
+        if (node.children) {
+            return { ...node, children: deleteNode(node.children, path) };
+        }
+        return node;
+    });
+};
+
+
+// Helper to add a node to the tree
+const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): FileNode[] => {
+    return nodes.map(node => {
+        if (node.path === parentPath) {
+            return { ...node, children: [...(node.children || []), newNode] };
+        }
+        if (node.children) {
+            return { ...node, children: addNode(node.children, parentPath, newNode) };
+        }
+        return node;
+    });
 };
 
 
@@ -206,8 +195,8 @@ export default function IdeLayout() {
   return (
     <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
       <ActivityBar />
-      <ResizablePanelGroup direction="horizontal" className="flex flex-1">
-        <ResizablePanel defaultSize={20} minSize={15}>
+      <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
+        <ResizablePanel defaultSize={15} minSize={15}>
           <FileExplorer 
             fileTree={fileTree}
             activeFile={activeFile}
@@ -219,8 +208,8 @@ export default function IdeLayout() {
           />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={80} minSize={30}>
-          <ResizablePanelGroup direction="vertical">
+        <ResizablePanel defaultSize={70} minSize={30}>
+          <ResizablePanelGroup direction="vertical" storageId="ide-editor-terminal-layout">
             <ResizablePanel defaultSize={75} minSize={25}>
               <EditorPane
                 openFiles={openFiles}
@@ -235,6 +224,10 @@ export default function IdeLayout() {
               <TerminalPane />
             </ResizablePanel>
           </ResizablePanelGroup>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={15} minSize={15}>
+            <AiToolsPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
