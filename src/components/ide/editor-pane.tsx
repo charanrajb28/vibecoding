@@ -1,10 +1,12 @@
 "use client";
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Terminal, Globe } from 'lucide-react';
 import MonacoEditor from './monaco-editor';
 import { FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { type BottomPanel } from './ide-layout';
 
 
 const findNode = (nodes: FileNode[], path: string): FileNode | null => {
@@ -19,12 +21,14 @@ const findNode = (nodes: FileNode[], path: string): FileNode | null => {
 };
 
 
-export default function EditorPane({ openFiles, activeFile, fileTree, onClose, onSelect }: {
+export default function EditorPane({ openFiles, activeFile, fileTree, onClose, onSelect, activeBottomPanel, onBottomPanelChange }: {
   openFiles: string[];
   activeFile: string | null;
   fileTree: FileNode[];
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
+  activeBottomPanel: BottomPanel;
+  onBottomPanelChange: (panel: BottomPanel) => void;
 }) {
   const activeNode = activeFile ? findNode(fileTree, activeFile) : null;
   const editorCode = activeNode?.content || `// File not found or has no content: ${activeFile}`;
@@ -33,8 +37,8 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="flex-none border-b overflow-x-auto">
-        <div className="flex items-center">
+      <div className="flex-none border-b flex justify-between items-center pr-2">
+        <div className="flex items-center overflow-x-auto">
           {openFiles.map(path => (
             <div
               key={path}
@@ -54,6 +58,26 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
               />
             </div>
           ))}
+        </div>
+        <div className="flex items-center gap-2">
+           <Button 
+            variant={activeBottomPanel === 'terminal' ? 'secondary' : 'ghost'} 
+            size="sm" 
+            onClick={() => onBottomPanelChange('terminal')}
+            className="h-8 px-2"
+          >
+              <Terminal className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Terminal</span>
+           </Button>
+           <Button 
+            variant={activeBottomPanel === 'webview' ? 'secondary' : 'ghost'} 
+            size="sm" 
+            onClick={() => onBottomPanelChange('webview')}
+            className="h-8 px-2"
+          >
+              <Globe className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">WebView</span>
+           </Button>
         </div>
       </div>
       <div className="flex-grow relative">

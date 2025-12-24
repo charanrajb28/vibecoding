@@ -14,6 +14,7 @@ import { fileTree as initialFileTree, type FileNode } from '@/lib/placeholder-da
 import { useToast } from "@/hooks/use-toast";
 import AiToolsPanel from "./ai-tools-panel";
 import SourceControlPanel from "./source-control-panel";
+import WebView from "./webview-pane";
 
 // Helper to find a node in the tree
 const findNode = (nodes: FileNode[], path: string): FileNode | null => {
@@ -41,7 +42,8 @@ const getAllChildFilePaths = (node: FileNode): string[] => {
 
 const addPathsToTree = (nodes: FileNode[], parentPath = ''): FileNode[] => {
   return nodes.map(node => {
-    const path = `${parentPath}/${node.name}`;
+    // For root level, path should start with /
+    const path = parentPath ? `${parentPath}/${node.name}` : `/${node.name}`;
     const newNode = { ...node, path };
     if (newNode.children) {
       newNode.children = addPathsToTree(newNode.children, path);
@@ -75,6 +77,7 @@ const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): File
 };
 
 export type ActivePanel = 'Files' | 'Source Control' | 'AI Tools';
+export type BottomPanel = 'terminal' | 'webview';
 
 
 export default function IdeLayout() {
@@ -83,6 +86,7 @@ export default function IdeLayout() {
   const [openFiles, setOpenFiles] = React.useState<string[]>(['/app/page.tsx']);
   const [activeFile, setActiveFile] = React.useState<string | null>('/app/page.tsx');
   const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
+  const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel>('terminal');
 
   const handleFileClick = (path: string) => {
     const node = findNode(fileTree, path);
@@ -140,7 +144,6 @@ export default function IdeLayout() {
         
         let rootPath = parentPath;
         if (!rootPath) {
-          rootPath = `/${renamedNode.name}`;
           const treeWithNode = [...tempTree, renamedNode];
           return treeWithNode;
         }
@@ -196,7 +199,7 @@ export default function IdeLayout() {
   const handleNewFolder = (parentPath: string, newName:string) => {
     let newPath = `${parentPath}/${newName}`;
     // Handle creation in root
-    if(parentPath === '') {
+    if(parentPath === '' || parentPath === '/') {
         newPath = `/${newName}`;
     }
 
@@ -206,7 +209,7 @@ export default function IdeLayout() {
     }
     const newNode: FileNode = { name: newName, type: 'folder', path: newPath, children: [] };
     
-    if(parentPath === '') {
+    if(parentPath === '' || parentPath === '/') {
        setFileTree(prevTree => [...prevTree, newNode]);
     } else {
        setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
@@ -238,13 +241,32 @@ export default function IdeLayout() {
     }
   };
 
+  const renderBottomPanel = () => {
+    switch (activeBottomPanel) {
+      case 'terminal':
+        return <TerminalPane />;
+      case 'webview':
+        return <WebView />;
+      default:
+        return null;
+    }
+  }
+
 
   return (
     <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
       <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
       <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
         <ResizablePanel defaultSize={20} minSize={15}>
-          {renderActivePanel()}
+          <ResizablePanelGroup direction="vertical" storageId="ide-left-panels-layout">
+            <ResizablePanel defaultSize={50} minSize={25}>
+               {renderActivePanel()}
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={50} minSize={25}>
+              <AiToolsPanel />
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={80} minSize={30}>
@@ -256,11 +278,13 @@ export default function IdeLayout() {
                 fileTree={fileTree}
                 onClose={handleFileClose}
                 onSelect={handleTabSelect}
+                activeBottomPanel={activeBottomPanel}
+                onBottomPanelChange={setActiveBottomPanel}
               />
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={25} minSize={15}>
-              <TerminalPane />
+              {renderBottomPanel()}
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
