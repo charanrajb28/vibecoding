@@ -47,16 +47,9 @@ export default function ProjectCard({ project, iconName }: ProjectCardProps) {
         className={cn(
             "h-full flex flex-col transition-all duration-300 ease-in-out",
             "bg-card text-card-foreground shadow-sm",
-            "relative", // Needed for pseudo-element positioning
-            "border-border hover:border-primary",
-            "group" // Needed for group-hover state
+            "border-border hover:border-primary"
         )}
     >
-      <div
-        className="absolute top-0 left-0 h-full w-full rounded-lg bg-gradient-to-r from-primary via-primary to-transparent bg-[length:200%_100%] bg-right transition-all duration-300 ease-in-out group-hover:bg-left"
-        style={{ backgroundSize: '200% 1px', backgroundRepeat: 'no-repeat' }}
-      ></div>
-        
         <CardHeader className="flex flex-row items-start justify-between z-10">
         <div>
             <CardTitle className="text-lg font-semibold">
