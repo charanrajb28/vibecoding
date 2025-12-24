@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,10 +22,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Logo } from '@/components/logo';
 import { useAuth } from '@/firebase';
-import {
-  initiateEmailSignUp,
-  initiateEmailSignIn,
-} from '@/firebase/non-blocking-login';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AuthCard() {
@@ -34,10 +33,14 @@ export default function AuthCard() {
   const [passwordSignIn, setPasswordSignIn] = useState('');
   const [emailSignUp, setEmailSignUp] = useState('');
   const [passwordSignUp, setPasswordSignUp] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   const handleSignIn = async () => {
+    if (!auth) return;
+    setIsSigningIn(true);
     try {
-      initiateEmailSignIn(auth, emailSignIn, passwordSignIn);
+      await signInWithEmailAndPassword(auth, emailSignIn, passwordSignIn);
       toast({
         title: 'Signed In',
         description: 'You have successfully signed in.',
@@ -47,25 +50,31 @@ export default function AuthCard() {
       toast({
         variant: 'destructive',
         title: 'Sign In Failed',
-        description: error.message,
+        description: error.message || 'An unknown error occurred.',
       });
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
   const handleSignUp = async () => {
+    if (!auth) return;
+    setIsSigningUp(true);
     try {
-      initiateEmailSignUp(auth, emailSignUp, passwordSignUp);
+      await createUserWithEmailAndPassword(auth, emailSignUp, passwordSignUp);
       toast({
         title: 'Signed Up',
-        description: 'Your account has been created.',
+        description: 'Your account has been created. Signing you in...',
       });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Sign Up Failed',
-        description: error.message,
+        description: error.message || 'An unknown error occurred.',
       });
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
@@ -93,6 +102,7 @@ export default function AuthCard() {
                 placeholder="m@example.com"
                 value={emailSignIn}
                 onChange={(e) => setEmailSignIn(e.target.value)}
+                disabled={isSigningIn}
               />
             </div>
             <div className="space-y-2">
@@ -102,10 +112,11 @@ export default function AuthCard() {
                 type="password"
                 value={passwordSignIn}
                 onChange={(e) => setPasswordSignIn(e.target.value)}
+                disabled={isSigningIn}
               />
             </div>
-            <Button className="w-full" onClick={handleSignIn}>
-              Sign In
+            <Button className="w-full" onClick={handleSignIn} disabled={isSigningIn}>
+              {isSigningIn ? 'Signing In...' : 'Sign In'}
             </Button>
           </CardContent>
         </TabsContent>
@@ -119,6 +130,7 @@ export default function AuthCard() {
                 placeholder="m@example.com"
                 value={emailSignUp}
                 onChange={(e) => setEmailSignUp(e.target.value)}
+                disabled={isSigningUp}
               />
             </div>
             <div className="space-y-2">
@@ -128,10 +140,11 @@ export default function AuthCard() {
                 type="password"
                 value={passwordSignUp}
                 onChange={(e) => setPasswordSignUp(e.target.value)}
+                disabled={isSigningUp}
               />
             </div>
-            <Button className="w-full" onClick={handleSignUp}>
-              Create Account
+            <Button className="w-full" onClick={handleSignUp} disabled={isSigningUp}>
+              {isSigningUp ? 'Creating Account...' : 'Create Account'}
             </Button>
           </CardContent>
         </TabsContent>
