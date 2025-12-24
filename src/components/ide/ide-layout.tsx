@@ -13,6 +13,7 @@ import TerminalPane from './terminal-pane';
 import { fileTree as initialFileTree, type FileNode } from '@/lib/placeholder-data';
 import { useToast } from "@/hooks/use-toast";
 import AiToolsPanel from "./ai-tools-panel";
+import SourceControlPanel from "./source-control-panel";
 
 // Helper to find a node in the tree
 const findNode = (nodes: FileNode[], path: string): FileNode | null => {
@@ -73,12 +74,15 @@ const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): File
     });
 };
 
+export type ActivePanel = 'Files' | 'Source Control' | 'AI Tools';
+
 
 export default function IdeLayout() {
   const { toast } = useToast();
   const [fileTree, setFileTree] = React.useState<FileNode[]>(() => addPathsToTree(initialFileTree));
   const [openFiles, setOpenFiles] = React.useState<string[]>(['/app/page.tsx']);
   const [activeFile, setActiveFile] = React.useState<string | null>('/app/page.tsx');
+  const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
 
   const handleFileClick = (path: string) => {
     const node = findNode(fileTree, path);
@@ -134,7 +138,15 @@ export default function IdeLayout() {
             renamedNode.children = updateChildrenPaths(renamedNode.children, oldPath, newPath);
         }
         
-        const finalTree = addNode(tempTree, parentPath, renamedNode);
+        let rootPath = parentPath;
+        if (!rootPath) {
+          rootPath = `/${renamedNode.name}`;
+          const treeWithNode = [...tempTree, renamedNode];
+          return treeWithNode;
+        }
+
+        const finalTree = addNode(tempTree, rootPath, renamedNode);
+
         return finalTree;
     });
 
@@ -181,23 +193,33 @@ export default function IdeLayout() {
     toast({ title: "Created", description: `Created file ${newName}` });
   };
 
-  const handleNewFolder = (parentPath: string, newName: string) => {
-    const newPath = `${parentPath}/${newName}`;
+  const handleNewFolder = (parentPath: string, newName:string) => {
+    let newPath = `${parentPath}/${newName}`;
+    // Handle creation in root
+    if(parentPath === '') {
+        newPath = `/${newName}`;
+    }
+
     if (findNode(fileTree, newPath)) {
         toast({ title: "Error", description: "A folder with that name already exists.", variant: "destructive" });
         return;
     }
     const newNode: FileNode = { name: newName, type: 'folder', path: newPath, children: [] };
-    setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
+    
+    if(parentPath === '') {
+       setFileTree(prevTree => [...prevTree, newNode]);
+    } else {
+       setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
+    }
+    
     toast({ title: "Created", description: `Created folder ${newName}` });
   };
-
-  return (
-    <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
-      <ActivityBar />
-      <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
-        <ResizablePanel defaultSize={15} minSize={15}>
-          <FileExplorer 
+  
+  const renderActivePanel = () => {
+    switch (activePanel) {
+      case 'Files':
+        return (
+          <FileExplorer
             fileTree={fileTree}
             activeFile={activeFile}
             onFileClick={handleFileClick}
@@ -206,9 +228,26 @@ export default function IdeLayout() {
             onNewFile={handleNewFile}
             onNewFolder={handleNewFolder}
           />
+        );
+      case 'Source Control':
+        return <SourceControlPanel />;
+      case 'AI Tools':
+        return <AiToolsPanel />;
+      default:
+        return null;
+    }
+  };
+
+
+  return (
+    <div className="flex h-screen w-screen bg-muted/40 text-foreground overflow-hidden">
+      <ActivityBar activePanel={activePanel} setActivePanel={setActivePanel} />
+      <ResizablePanelGroup direction="horizontal" className="flex flex-1" storageId="ide-main-layout">
+        <ResizablePanel defaultSize={20} minSize={15}>
+          {renderActivePanel()}
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={70} minSize={30}>
+        <ResizablePanel defaultSize={80} minSize={30}>
           <ResizablePanelGroup direction="vertical" storageId="ide-editor-terminal-layout">
             <ResizablePanel defaultSize={75} minSize={25}>
               <EditorPane
@@ -224,10 +263,6 @@ export default function IdeLayout() {
               <TerminalPane />
             </ResizablePanel>
           </ResizablePanelGroup>
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={15} minSize={15}>
-            <AiToolsPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
