@@ -24,8 +24,6 @@ import { Logo } from '@/components/logo';
 import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AuthCard() {
   const auth = useAuth();
@@ -66,43 +64,32 @@ export default function AuthCard() {
   const handleSignUp = async () => {
     if (!auth || !firestore) return;
     setIsSigningUp(true);
+  
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, emailSignUp, passwordSignUp);
-      const user = userCredential.user;
-
-      if (user) {
-        const userRef = doc(firestore, 'users', user.uid);
-        const userData = {
-          id: user.uid,
-          email: emailSignUp,
-          fullName: fullName,
-          username: username,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-
-        // Use non-blocking write with error handling
-        setDoc(userRef, userData).catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: userRef.path,
-            operation: 'create',
-            requestResourceData: userData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
-      }
-
-      toast({
-        title: 'Signed Up',
-        description: 'Your account has been created. Signing you in...',
+      const cred = await createUserWithEmailAndPassword(auth, emailSignUp, passwordSignUp);
+      const user = cred.user;
+  
+      await setDoc(doc(firestore, "users", user.uid), {
+        id: user.uid,
+        email: emailSignUp,
+        fullName,
+        username,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: error.message || 'An unknown error occurred.',
+  
+      // 🔥 Provision user workspace
+      await fetch("/api/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid }),
       });
+  
+      toast({ title: "Signed Up", description: "Workspace created" });
+      router.push("/dashboard");
+  
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Sign Up Failed", description: err.message });
     } finally {
       setIsSigningUp(false);
     }
