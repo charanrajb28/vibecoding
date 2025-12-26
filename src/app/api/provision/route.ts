@@ -31,6 +31,8 @@ async function getKubeClient() {
 
 export async function POST(req: Request) {
   const { userId } = await req.json();
+  console.log("Provisioning user:", userId);
+
   const api = await getKubeClient();
 
   const pod = {
@@ -57,5 +59,7 @@ export async function POST(req: Request) {
   };
 
   await api.createNamespacedPod("default", pod);
+  console.log("Pod created for:", userId);
+  
   return NextResponse.json({ success: true });
 }
