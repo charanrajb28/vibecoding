@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import k8s from "@kubernetes/client-node";
 import { GoogleAuth } from "google-auth-library";
+import fs from "fs";
+import path from "path";
+
+function toK8sName(uid: string) {
+  return "user-" + uid.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 50);
+}
+
 
 async function getKubeClient() {
+  let creds;
+    
+    const p = path.join(process.cwd(), "key.json");
+    creds = JSON.parse(fs.readFileSync(p, "utf8"));
+  
+
   const auth = new GoogleAuth({
-    credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT!),
+    credentials: creds,
     scopes: ["https://www.googleapis.com/auth/cloud-platform"],
   });
 
@@ -31,6 +44,7 @@ async function getKubeClient() {
   return kc.makeApiClient(k8s.CoreV1Api);
 }
 
+
 async function waitForPod(api: k8s.CoreV1Api, name: string) {
   for (let i = 0; i < 20; i++) {
     try {
@@ -49,10 +63,11 @@ export async function POST(req: Request) {
 
     const api = await getKubeClient();
 
+    const podName = toK8sName(userId);
     const res = await api.createNamespacedPod("default", {
       apiVersion: "v1",
       kind: "Pod",
-      metadata: { name: `user-${userId}` },
+      metadata: { name: podName },
       spec: {
         containers: [{
           name: "runner",
