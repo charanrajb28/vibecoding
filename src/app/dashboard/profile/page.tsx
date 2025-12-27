@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -67,6 +68,14 @@ export default function ProfilePage() {
       twitterHandle: '',
     },
   });
+  
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('');
+  };
 
   useEffect(() => {
     if (userProfile) {
@@ -121,6 +130,9 @@ export default function ProfilePage() {
                 <Skeleton className="h-4 w-64 mt-2" />
             </CardHeader>
             <CardContent className="space-y-8">
+                <div className="flex items-center space-x-4">
+                    <Skeleton className="h-24 w-24 rounded-full" />
+                </div>
                 {[...Array(6)].map((_, i) => (
                     <div className="space-y-2" key={i}>
                         <Skeleton className="h-4 w-24" />
@@ -142,6 +154,19 @@ export default function ProfilePage() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="flex items-center space-x-6">
+                <Avatar className="h-24 w-24">
+                    <AvatarImage src={userProfile?.avatarUrl || "https://picsum.photos/seed/user-avatar/100/100"} alt={userProfile?.fullName || 'User'} />
+                    <AvatarFallback>{getInitials(userProfile?.fullName)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-grow">
+                    <h3 className="text-lg font-semibold">Profile Picture</h3>
+                    <p className="text-sm text-muted-foreground mb-3">Upload a new photo.</p>
+                     <Button type="button" variant="outline" disabled>
+                        Choose File
+                    </Button>
+                </div>
+            </div>
             <FormField
               control={form.control}
               name="fullName"
@@ -253,3 +278,5 @@ export default function ProfilePage() {
     </Card>
   );
 }
+
+    

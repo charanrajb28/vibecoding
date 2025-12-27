@@ -40,6 +40,11 @@
           "type": "string",
           "description": "The user's Twitter (X) handle."
         },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL to the user's avatar image.",
+          "format": "uri"
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp of when the user account was created.",
@@ -212,3 +217,5 @@
     "reasoning": "The Firestore data structure is designed to support CodeSail's core features, including user authentication, project management, template selection, and Git integration. The structure prioritizes authorization independence and clear security rules.  It leverages path-based ownership for user-related data (projects) and structural segregation to maintain homogeneous security postures within collections.  Authorization Independence is achieved via path-based ownership and is directly tied to the authenticated user's ID (`request.auth.uid`).  QAPs are supported through structural segregation and predictable schema, where `list` operations can be securely performed based on path ownership."
   }
 }
+
+    
