@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -33,6 +34,10 @@ const profileFormSchema = z.object({
   email: z.string().email({
     message: 'Please enter a valid email address.',
   }),
+  bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters."}).optional(),
+  websiteUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  githubUsername: z.string().optional(),
+  twitterHandle: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -56,6 +61,10 @@ export default function ProfilePage() {
       fullName: '',
       username: '',
       email: '',
+      bio: '',
+      websiteUrl: '',
+      githubUsername: '',
+      twitterHandle: '',
     },
   });
 
@@ -65,6 +74,10 @@ export default function ProfilePage() {
         fullName: userProfile.fullName || '',
         username: userProfile.username || '',
         email: user?.email || '',
+        bio: userProfile.bio || '',
+        websiteUrl: userProfile.websiteUrl || '',
+        githubUsername: userProfile.githubUsername || '',
+        twitterHandle: userProfile.twitterHandle || '',
       });
     }
   }, [userProfile, user, form]);
@@ -77,6 +90,10 @@ export default function ProfilePage() {
       await updateDoc(userDocRef, {
         fullName: data.fullName,
         username: data.username,
+        bio: data.bio,
+        websiteUrl: data.websiteUrl,
+        githubUsername: data.githubUsername,
+        twitterHandle: data.twitterHandle,
         updatedAt: serverTimestamp(),
       });
       toast({
@@ -104,18 +121,12 @@ export default function ProfilePage() {
                 <Skeleton className="h-4 w-64 mt-2" />
             </CardHeader>
             <CardContent className="space-y-8">
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-10 w-full" />
-                </div>
+                {[...Array(6)].map((_, i) => (
+                    <div className="space-y-2" key={i}>
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                ))}
                 <Skeleton className="h-10 w-32" />
             </CardContent>
         </Card>
@@ -173,6 +184,65 @@ export default function ProfilePage() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us a little bit about yourself"
+                      className="resize-none"
+                      {...field}
+                      disabled={isUpdating}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="websiteUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://your-website.com" {...field} disabled={isUpdating} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <FormField
+                control={form.control}
+                name="githubUsername"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>GitHub</FormLabel>
+                    <FormControl>
+                        <Input placeholder="github-username" {...field} disabled={isUpdating} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="twitterHandle"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Twitter / X</FormLabel>
+                    <FormControl>
+                        <Input placeholder="twitter_handle" {...field} disabled={isUpdating} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <Button type="submit" disabled={isUpdating}>
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isUpdating ? 'Saving...' : 'Save Changes'}
