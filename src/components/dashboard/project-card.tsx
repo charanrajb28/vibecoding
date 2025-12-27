@@ -21,11 +21,21 @@ import { MoreVertical, Trash2, Edit, PlayCircle, Component, Server } from 'lucid
 import type { Project } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 type ProjectCardProps = {
   project: Project;
   iconName: string;
 };
+
+// A simple map for pod/workspace status, can be expanded later
+const statusMap = {
+  running: 'online',
+  pending: 'offline',
+  failed: 'error',
+  unknown: 'offline'
+} as const;
+type Status = keyof typeof statusMap;
 
 const statusClasses = {
   online: 'bg-green-500',
@@ -34,13 +44,26 @@ const statusClasses = {
 };
 
 const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  'nextjs-template': Component,
+  'react-template': Component,
+  'node-template': Server,
+  'vite-template': Component,
   component: Component,
   server: Server,
 };
 
 
 export default function ProjectCard({ project, iconName }: ProjectCardProps) {
-  const Icon = iconMap[iconName] || Component;
+  const Icon = iconMap[project.template] || Component;
+  
+  // A real implementation would check the k8s pod status
+  const currentStatus: Status = 'running'; 
+  const displayStatus = statusMap[currentStatus];
+
+  const lastUpdated = project.updatedAt?.toDate
+    ? formatDistanceToNow(project.updatedAt.toDate(), { addSuffix: true })
+    : 'a while ago';
+
 
   return (
     <Card 
@@ -59,7 +82,7 @@ export default function ProjectCard({ project, iconName }: ProjectCardProps) {
             </CardTitle>
             <CardDescription className="flex items-center gap-2 pt-1">
             <Icon className="w-4 h-4 text-muted-foreground" />
-            <span>{project.framework}</span>
+            <span>{project.template}</span>
             </CardDescription>
         </div>
         <DropdownMenu>
@@ -87,16 +110,16 @@ export default function ProjectCard({ project, iconName }: ProjectCardProps) {
         <CardContent className="flex-grow z-10">
         <div className="flex items-center space-x-2">
             <span
-            className={cn('h-2 w-2 rounded-full', statusClasses[project.status])}
-            aria-label={`Status: ${project.status}`}
+            className={cn('h-2 w-2 rounded-full', statusClasses[displayStatus])}
+            aria-label={`Status: ${displayStatus}`}
             />
-            <Badge variant={project.status === 'error' ? 'destructive' : 'secondary'} className="capitalize">
-            {project.status}
+            <Badge variant={displayStatus === 'error' ? 'destructive' : 'secondary'} className="capitalize">
+            {displayStatus}
             </Badge>
         </div>
         </CardContent>
         <CardFooter className="z-10">
-        <p className="text-sm text-muted-foreground">Last updated {project.lastUpdated}</p>
+        <p className="text-sm text-muted-foreground">Last updated {lastUpdated}</p>
         </CardFooter>
     </Card>
   );

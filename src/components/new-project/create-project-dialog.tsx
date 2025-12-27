@@ -25,6 +25,10 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Template } from '@/lib/placeholder-data';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useFirestore, useUser } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -46,6 +50,9 @@ export default function CreateProjectDialog({
 }: CreateProjectDialogProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const [isCreating, setIsCreating] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,16 +62,46 @@ export default function CreateProjectDialog({
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    toast({
-      title: 'Project Created!',
-      description: `Your project "${values.name}" is being set up.`,
-    });
-    onOpenChange(false);
-    // In a real app, you would have some logic to create the project
-    // and then navigate to the project page.
-    router.push(`/project/${template.id}`);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user || !firestore) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create a project.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const docRef = await addDoc(collection(firestore, 'users', user.uid, 'projects'), {
+        name: values.name,
+        description: values.description,
+        template: template.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        userId: user.uid,
+      });
+
+      toast({
+        title: 'Project Created!',
+        description: `Your project "${values.name}" is being set up.`,
+      });
+
+      onOpenChange(false);
+      router.push(`/project/${docRef.id}`);
+
+    } catch (error: any) {
+      console.error("Error creating project: ", error);
+      toast({
+        title: 'Error Creating Project',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
   }
 
   return (
@@ -85,7 +122,7 @@ export default function CreateProjectDialog({
                 <FormItem>
                   <FormLabel>Project Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="My awesome project" {...field} />
+                    <Input placeholder="My awesome project" {...field} disabled={isCreating} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -102,6 +139,7 @@ export default function CreateProjectDialog({
                       placeholder="Tell us a little bit about your project"
                       className="resize-none"
                       {...field}
+                      disabled={isCreating}
                     />
                   </FormControl>
                   <FormMessage />
@@ -109,8 +147,11 @@ export default function CreateProjectDialog({
               )}
             />
             <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button type="submit">Create Project</Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isCreating}>Cancel</Button>
+                <Button type="submit" disabled={isCreating}>
+                  {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isCreating ? 'Creating...' : 'Create Project'}
+                </Button>
             </DialogFooter>
           </form>
         </Form>

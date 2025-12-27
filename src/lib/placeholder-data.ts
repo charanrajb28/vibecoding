@@ -1,10 +1,15 @@
+import { Timestamp } from "firebase/firestore";
+
 export type Project = {
   id: string;
   name: string;
-  framework: string;
-  lastUpdated: string;
-  status: 'online' | 'offline' | 'error';
-  icon: string;
+  description?: string;
+  template: string;
+  gitRepoUrl?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  // This is a client-side addition for UI purposes and not in the DB schema
+  icon?: string; 
 };
 
 export type Template = {
@@ -21,51 +26,6 @@ export type FileNode = {
   children?: FileNode[];
   content?: string;
 };
-
-import React from 'react';
-
-export const projects: Project[] = [
-  {
-    id: '1',
-    name: 'E-commerce Frontend',
-    framework: 'Next.js',
-    lastUpdated: '2 hours ago',
-    status: 'online',
-    icon: 'component'
-  },
-  {
-    id: '2',
-    name: 'API Gateway',
-    framework: 'Node.js',
-    lastUpdated: '5 hours ago',
-    status: 'online',
-    icon: 'server'
-  },
-  {
-    id: '3',
-    name: 'Portfolio Website',
-    framework: 'React',
-    lastUpdated: '1 day ago',
-    status: 'offline',
-    icon: 'component'
-  },
-  {
-    id: '4',
-    name: 'Blog Backend',
-    framework: 'Node.js',
-    lastUpdated: '3 days ago',
-    status: 'error',
-    icon: 'server'
-  },
-  {
-    id: '5',
-    name: 'SaaS Dashboard',
-    framework: 'Next.js',
-    lastUpdated: '1 week ago',
-    status: 'online',
-    icon: 'component'
-  },
-];
 
 export const templates: Template[] = [
   {
