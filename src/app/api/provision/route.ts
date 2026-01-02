@@ -72,9 +72,23 @@ export async function POST(req: Request) {
         containers: [{
           name: "runner",
           image: "node:20",
-          command: ["bash","-c","sleep infinity"],
+          command: ["bash","-c"],
+          args: [
+            `corepack enable
+            corepack prepare pnpm@latest --activate
+            pnpm config set store-dir /pnpm-store
+            sleep infinity
+            `
+          ],
+          volumeMounts: [
+            { name: "pnpm-store", mountPath: "/pnpm-store" }
+          ]
         }],
-      },
+        volumes: [
+          { name: "pnpm-store", persistentVolumeClaim: { claimName: "pvc-pnpm-store" } }
+        ]
+      }
+      ,
     });
 
     console.log("K8S response:", res.response?.statusCode);
