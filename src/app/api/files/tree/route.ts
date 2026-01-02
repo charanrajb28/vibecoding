@@ -14,8 +14,12 @@ function buildTree(items: any[], root: string, projectId: string) {
       nodeMap[item.path] = { ...item, children: item.type === 'folder' ? [] : undefined };
     }
   });
+  console.log('--- Initial Node Map ---');
+  console.log(JSON.stringify(nodeMap, null, 2));
+
 
   // Then, build the hierarchy
+  console.log('--- Building Hierarchy ---');
   Object.values(nodeMap).forEach(node => {
     if (node.path === root) return; // Skip root node
 
@@ -23,9 +27,14 @@ function buildTree(items: any[], root: string, projectId: string) {
     const parent = nodeMap[parentPath];
 
     if (parent && parent.children) {
+      console.log(`Attaching node '${node.name}' to parent '${parent.name}'`);
       parent.children.push(node);
+    } else {
+      console.log(`Could not find parent for node '${node.name}' at path '${parentPath}'`);
     }
   });
+  console.log('--- Hierarchy Built ---');
+
 
   // Recursively sort children
   const sortChildren = (node: any) => {
@@ -95,7 +104,8 @@ export async function POST(req: Request) {
 
   const tree = buildTree(rows, root, projectId);
   
-  console.log('buildTree output:', JSON.stringify(tree, null, 2));
+  console.log('--- Final buildTree output: ---');
+  console.log(JSON.stringify(tree, null, 2));
 
   return NextResponse.json(tree);
 }
