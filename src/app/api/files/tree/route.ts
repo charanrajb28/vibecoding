@@ -2,103 +2,96 @@
 import { NextResponse } from "next/server";
 import k8s from "@kubernetes/client-node";
 import { getKubeClient } from "@/lib/kube";
+import stream from "stream";
 
-function buildTree(paths: string[], root: string) {
-    const rootNode = { name: 'workspace', type: 'folder', path: root, children: [] as any[] };
-    const map: { [key: string]: any } = { [root]: rootNode };
+function buildTree(paths: string[], root: string, projectId: string) {
+  const rootNode = { name: projectId, type: "folder", path: root, children: [] as any[] };
 
-    if (paths.length === 1 && paths[0] === '') {
-        return [rootNode];
-    }
-    
-    paths.sort((a, b) => a.localeCompare(b));
-
-    paths.forEach(path => {
-        const parts = path.substring(root.length + 1).split('/');
-        let currentParent = rootNode;
-        let currentPath = root;
-
-        parts.forEach((part, index) => {
-            currentPath += `/${part}`;
-            let node = currentParent.children.find(child => child.path === currentPath);
-
-            if (!node) {
-                const isDirectory = index < parts.length - 1 || paths.some(p => p.startsWith(currentPath + '/'));
-                 // A path is a directory if it's not the last part of a path OR
-                 // if other paths exist that are children of it. This is not perfect,
-                 // as it can't represent empty directories not found by `find`. We will fix this.
-                
-                 node = {
-                    name: part,
-                    path: currentPath,
-                    type: 'file', // Assume file initially
-                };
-
-                if (isDirectory) {
-                   node.type = 'folder';
-                   node.children = [];
-                }
-                
-                currentParent.children.push(node);
-
-                currentParent.children.sort((a, b) => {
-                    if (a.type === 'folder' && b.type === 'file') return -1;
-                    if (a.type === 'file' && b.type === 'folder') return 1;
-                    return a.name.localeCompare(b.name);
-                });
-            }
-            
-            if (node.type === 'folder') {
-                currentParent = node;
-            }
-        });
-    });
-
+  if (paths.length === 1 && paths[0] === root) {
+    // This case handles an empty directory
     return [rootNode];
-}
+  }
+  
+  paths.forEach(p => {
+    // Only process paths that are children of the root
+    if (!p.startsWith(root + '/')) return;
 
+    const parts = p.substring(root.length + 1).split("/");
+    let current = rootNode;
+
+    parts.forEach((part, i) => {
+      const isLastPart = i === parts.length - 1;
+      const fullPath = `${current.path}/${part}`;
+      
+      let node = current.children.find((c: any) => c.name === part);
+
+      if (!node) {
+        // A path is a folder if it's not the last part of its own path,
+        // OR if another path exists that is a child of it.
+        const isFolder = !isLastPart || paths.some(otherPath => otherPath.startsWith(`${p}/`));
+        
+        node = {
+          name: part,
+          path: p, // Use the full path for the node
+          type: isFolder ? "folder" : "file",
+        };
+        if (isFolder) {
+            node.children = [];
+        }
+        current.children.push(node);
+
+        // Sort children: folders first, then by name
+        current.children.sort((a,b) => {
+            if (a.type === 'folder' && b.type === 'file') return -1;
+            if (a.type === 'file' && b.type === 'folder') return 1;
+            return a.name.localeCompare(b.name);
+        });
+      }
+      
+      if(node.type === 'folder') {
+         current = node;
+      }
+    });
+  });
+
+  return [rootNode];
+}
 
 export async function POST(req: Request) {
   const { userId, projectId } = await req.json();
-  const podName = `user-${userId.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 50)}`;
+  const podName = `user-${userId.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0,50)}`;
   const root = `/workspace/${projectId}`;
 
   const { kc } = await getKubeClient();
   const exec = new k8s.Exec(kc);
 
   let output = "";
-  const stream = new (require("stream").Writable)({
-    write(chunk: any, _: any, cb: any) {
+  const writable = new stream.Writable({
+    write(chunk, _, next) {
       output += chunk.toString();
-      cb();
+      next();
     }
   });
 
-   const streamErr = new (require("stream").Writable)({
-    write(chunk: any, _: any, cb: any) {
-      console.log('stderr from find:', chunk.toString());
-      cb();
-    }
-  });
-
-  // Using find to list all files AND directories
   await exec.exec(
     "default",
     podName,
     "runner",
-    // Find all files and directories, then strip leading './'
-    ["bash", "-c", `cd ${root} >/dev/null 2>&1 && find . -not -path '.' | sed 's|^./||'`],
-    stream,
-    streamErr,
+    ["bash","-c",`
+      mkdir -p ${root}
+      if [ -z "$(ls -A ${root})" ]; then
+        touch ${root}/README.md
+      fi
+      find ${root}
+    `],
+    writable,
+    writable,
     null,
     false
   );
 
-  const relativePaths = output.trim().split("\n").filter(p => p); 
-  const absolutePaths = relativePaths.map(p => `${root}/${p}`);
-  
-  // This function now expects absolute paths
-  const tree = buildTree(absolutePaths, root);
-  
+  const files = output.trim().split("\n").filter(Boolean);
+  const tree = buildTree(files, root, projectId);
+
   return NextResponse.json(tree);
 }

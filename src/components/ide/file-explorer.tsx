@@ -112,7 +112,7 @@ const FileTree = ({
   onNewFile: (parentPath: string, name: string) => void;
   onNewFolder: (parentPath: string, name: string) => void;
 }) => {
-  const [isExpanded, setIsExpanded] = useState(level < 2);
+  const [isExpanded, setIsExpanded] = useState(level === 0);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState<'file' | 'folder' | null>(null);
 
