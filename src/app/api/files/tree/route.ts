@@ -4,62 +4,51 @@ import k8s from "@kubernetes/client-node";
 import { getKubeClient } from "@/lib/kube";
 import stream from "stream";
 
-function buildTree(paths: string[], root: string, projectId: string) {
-  const rootNode = { name: projectId, type: "folder", path: root, children: [] as any[] };
+function buildTree(items: any[], root: string, projectId: string) {
+  const rootNode = { name: projectId, path: root, type: "folder", children: [] as any[] };
 
-  if (paths.length === 1 && paths[0] === root) {
-    // This case handles an empty directory
-    return [rootNode];
-  }
-  
-  paths.forEach(p => {
-    // Only process paths that are children of the root
-    if (!p.startsWith(root + '/')) return;
+  const itemMap: { [key: string]: any } = {};
+  items.forEach(item => itemMap[item.path] = { ...item, children: item.type === 'folder' ? [] : undefined });
 
-    const parts = p.substring(root.length + 1).split("/");
-    let current = rootNode;
+  const sortedItems = Object.values(itemMap).sort((a, b) => a.path.localeCompare(b.path));
 
-    parts.forEach((part, i) => {
-      const isLastPart = i === parts.length - 1;
-      const fullPath = `${current.path}/${part}`;
-      
-      let node = current.children.find((c: any) => c.name === part);
+  sortedItems.forEach(item => {
+    if (item.path === root) {
+      // This is the root item itself, we can ignore it as we've already created rootNode
+      return;
+    }
 
-      if (!node) {
-        // A path is a folder if it's not the last part of its own path,
-        // OR if another path exists that is a child of it.
-        const isFolder = !isLastPart || paths.some(otherPath => otherPath.startsWith(`${p}/`));
-        
-        node = {
-          name: part,
-          path: p, // Use the full path for the node
-          type: isFolder ? "folder" : "file",
-        };
-        if (isFolder) {
-            node.children = [];
-        }
-        current.children.push(node);
+    const parentPath = item.path.substring(0, item.path.lastIndexOf('/'));
+    const parent = itemMap[parentPath];
 
-        // Sort children: folders first, then by name
-        current.children.sort((a,b) => {
+    if (parent && parent.children) {
+      parent.children.push(item);
+      // Sort children: folders first, then alphabetically
+      parent.children.sort((a, b) => {
+        if (a.type === 'folder' && b.type === 'file') return -1;
+        if (a.type === 'file' && b.type === 'folder') return 1;
+        return a.name.localeCompare(b.name);
+      });
+    } else if (parentPath === root) {
+        rootNode.children.push(item);
+        // Sort children: folders first, then alphabetically
+        rootNode.children.sort((a, b) => {
             if (a.type === 'folder' && b.type === 'file') return -1;
             if (a.type === 'file' && b.type === 'folder') return 1;
             return a.name.localeCompare(b.name);
         });
-      }
-      
-      if(node.type === 'folder') {
-         current = node;
-      }
-    });
+    }
   });
+
+  // Assign the collected children to the root node
+  rootNode.children = itemMap[root]?.children || rootNode.children;
 
   return [rootNode];
 }
 
 export async function POST(req: Request) {
   const { userId, projectId } = await req.json();
-  const podName = `user-${userId.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0,50)}`;
+  const podName = `user-${userId.toLowerCase().replace(/[^a-z0-9]/g,"-").slice(0,50)}`;
   const root = `/workspace/${projectId}`;
 
   const { kc } = await getKubeClient();
@@ -73,25 +62,40 @@ export async function POST(req: Request) {
     }
   });
 
+  const command = `
+    if [ ! -d ${root} ] || [ -z "$(ls -A ${root})" ]; then
+      mkdir -p ${root}
+      touch ${root}/README.md
+    fi
+    find ${root} -printf "%p|%s|%y\\n"
+  `;
+
   await exec.exec(
     "default",
     podName,
     "runner",
-    ["bash","-c",`
-      mkdir -p ${root}
-      if [ -z "$(ls -A ${root})" ]; then
-        touch ${root}/README.md
-      fi
-      find ${root}
-    `],
+    ["bash", "-c", command],
     writable,
-    writable,
+    writable, // Also capture stderr
     null,
     false
   );
+  
+  if (output.trim() === '') {
+    return NextResponse.json([{ name: projectId, path: root, type: "folder", children: [] }]);
+  }
 
-  const files = output.trim().split("\n").filter(Boolean);
-  const tree = buildTree(files, root, projectId);
+  const rows = output.trim().split("\n").map(r => {
+    const [path, size, type] = r.split("|");
+    return {
+      path,
+      name: path.split('/').pop(),
+      size: Number(size),
+      type: type === "d" ? "folder" : "file"
+    };
+  });
+
+  const tree = buildTree(rows, root, projectId);
   
   console.log('buildTree output:', JSON.stringify(tree, null, 2));
 
