@@ -6,42 +6,40 @@ import stream from "stream";
 
 function buildTree(items: any[], root: string, projectId: string) {
   const rootNode = { name: projectId, path: root, type: "folder", children: [] as any[] };
+  const nodeMap: { [path: string]: any } = { [root]: rootNode };
 
-  const itemMap: { [key: string]: any } = {};
-  items.forEach(item => itemMap[item.path] = { ...item, children: item.type === 'folder' ? [] : undefined });
-
-  const sortedItems = Object.values(itemMap).sort((a, b) => a.path.localeCompare(b.path));
-
-  sortedItems.forEach(item => {
-    if (item.path === root) {
-      // This is the root item itself, we can ignore it as we've already created rootNode
-      return;
+  // First, create a map of all nodes
+  items.forEach(item => {
+    if (item.path !== root) { // Don't re-add the root
+      nodeMap[item.path] = { ...item, children: item.type === 'folder' ? [] : undefined };
     }
+  });
 
-    const parentPath = item.path.substring(0, item.path.lastIndexOf('/'));
-    const parent = itemMap[parentPath];
+  // Then, build the hierarchy
+  Object.values(nodeMap).forEach(node => {
+    if (node.path === root) return; // Skip root node
+
+    const parentPath = node.path.substring(0, node.path.lastIndexOf('/'));
+    const parent = nodeMap[parentPath];
 
     if (parent && parent.children) {
-      parent.children.push(item);
-      // Sort children: folders first, then alphabetically
-      parent.children.sort((a, b) => {
+      parent.children.push(node);
+    }
+  });
+
+  // Recursively sort children
+  const sortChildren = (node: any) => {
+    if (node.children) {
+      node.children.sort((a: any, b: any) => {
         if (a.type === 'folder' && b.type === 'file') return -1;
         if (a.type === 'file' && b.type === 'folder') return 1;
         return a.name.localeCompare(b.name);
       });
-    } else if (parentPath === root) {
-        rootNode.children.push(item);
-        // Sort children: folders first, then alphabetically
-        rootNode.children.sort((a, b) => {
-            if (a.type === 'folder' && b.type === 'file') return -1;
-            if (a.type === 'file' && b.type === 'folder') return 1;
-            return a.name.localeCompare(b.name);
-        });
+      node.children.forEach(sortChildren);
     }
-  });
+  };
 
-  // Assign the collected children to the root node
-  rootNode.children = itemMap[root]?.children || rootNode.children;
+  sortChildren(rootNode);
 
   return [rootNode];
 }
