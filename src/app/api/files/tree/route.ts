@@ -7,13 +7,11 @@ function buildTree(paths: string[], root: string) {
     const rootNode = { name: 'workspace', type: 'folder', path: root, children: [] as any[] };
     const map: { [key: string]: any } = { [root]: rootNode };
 
-    // Handle empty find output
     if (paths.length === 1 && paths[0] === '') {
         return [rootNode];
     }
     
-    // Sort paths to ensure parent directories are created before children
-    paths.sort();
+    paths.sort((a, b) => a.localeCompare(b));
 
     paths.forEach(path => {
         const parts = path.substring(root.length + 1).split('/');
@@ -22,20 +20,27 @@ function buildTree(paths: string[], root: string) {
 
         parts.forEach((part, index) => {
             currentPath += `/${part}`;
-            let node = currentParent.children.find(child => child.name === part);
+            let node = currentParent.children.find(child => child.path === currentPath);
 
             if (!node) {
-                const isDirectory = index < parts.length - 1;
-                node = {
+                const isDirectory = index < parts.length - 1 || paths.some(p => p.startsWith(currentPath + '/'));
+                 // A path is a directory if it's not the last part of a path OR
+                 // if other paths exist that are children of it. This is not perfect,
+                 // as it can't represent empty directories not found by `find`. We will fix this.
+                
+                 node = {
                     name: part,
                     path: currentPath,
-                    type: isDirectory ? 'folder' : 'file',
+                    type: 'file', // Assume file initially
                 };
+
                 if (isDirectory) {
-                    node.children = [];
+                   node.type = 'folder';
+                   node.children = [];
                 }
+                
                 currentParent.children.push(node);
-                 // Sort children: folders first, then files alphabetically
+
                 currentParent.children.sort((a, b) => {
                     if (a.type === 'folder' && b.type === 'file') return -1;
                     if (a.type === 'file' && b.type === 'folder') return 1;
@@ -71,28 +76,28 @@ export async function POST(req: Request) {
 
    const streamErr = new (require("stream").Writable)({
     write(chunk: any, _: any, cb: any) {
-      // For now, let's log errors from find, but not fail the request
-      // This can happen if the directory is empty
       console.log('stderr from find:', chunk.toString());
       cb();
     }
   });
 
-  // Using find to list all files and directories that exist
+  // Using find to list all files AND directories
   await exec.exec(
     "default",
     podName,
     "runner",
     // Find all files and directories, then strip leading './'
-    ["bash", "-c", `cd ${root} && find . -mindepth 1 | sed 's|^./||'`],
+    ["bash", "-c", `cd ${root} >/dev/null 2>&1 && find . -not -path '.' | sed 's|^./||'`],
     stream,
     streamErr,
     null,
     false
   );
 
-  const relativePaths = output.trim().split("\n").filter(p => p); // Filter out empty strings
+  const relativePaths = output.trim().split("\n").filter(p => p); 
   const absolutePaths = relativePaths.map(p => `${root}/${p}`);
+  
+  // This function now expects absolute paths
   const tree = buildTree(absolutePaths, root);
   
   return NextResponse.json(tree);
