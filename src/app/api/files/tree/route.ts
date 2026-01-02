@@ -25,7 +25,7 @@ function buildTree(paths: string[], root: string) {
             let node = currentParent.children.find(child => child.name === part);
 
             if (!node) {
-                const isDirectory = path.endsWith('/') || index < parts.length - 1;
+                const isDirectory = index < parts.length - 1;
                 node = {
                     name: part,
                     path: currentPath,
@@ -35,6 +35,12 @@ function buildTree(paths: string[], root: string) {
                     node.children = [];
                 }
                 currentParent.children.push(node);
+                 // Sort children: folders first, then files alphabetically
+                currentParent.children.sort((a, b) => {
+                    if (a.type === 'folder' && b.type === 'file') return -1;
+                    if (a.type === 'file' && b.type === 'folder') return 1;
+                    return a.name.localeCompare(b.name);
+                });
             }
             
             if (node.type === 'folder') {
