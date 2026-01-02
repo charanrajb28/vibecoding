@@ -89,6 +89,16 @@ export default function CreateProjectDialog({
         description: `Your project "${values.name}" is being set up.`,
       });
 
+      await fetch("/api/create-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.uid,
+          projectId: docRef.id
+        })
+      });
+      
+
       onOpenChange(false);
       router.push(`/project/${docRef.id}`);
 

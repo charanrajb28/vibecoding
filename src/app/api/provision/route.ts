@@ -74,16 +74,23 @@ export async function POST(req: Request) {
           image: "node:20",
           command: ["bash","-c"],
           args: [
-            `corepack enable
-            corepack prepare pnpm@latest --activate
+            `
+            set -e
+            echo "Enabling corepack"
+            corepack enable
+            echo "Preparing pnpm"
+            corepack prepare pnpm@8.15.4 --activate
+            echo "Setting store-dir"
             pnpm config set store-dir /pnpm-store
+            echo "Startup complete"
             sleep infinity
             `
           ],
           volumeMounts: [
             { name: "pnpm-store", mountPath: "/pnpm-store" }
           ]
-        }],
+        }]
+        ,
         volumes: [
           { name: "pnpm-store", persistentVolumeClaim: { claimName: "pvc-pnpm-store" } }
         ]

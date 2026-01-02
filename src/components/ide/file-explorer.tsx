@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { File, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2, Code, FileJson, FileCode, Wind, Braces, FileType, FileCog } from 'lucide-react';
+import { File, ChevronRight, ChevronDown, FilePlus, FolderPlus, Edit, Trash2, Code, FileJson, FileCode, Wind, Braces, FileType, FileCog, FileText, Loader2 } from 'lucide-react';
 import { type FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import {
@@ -68,7 +69,12 @@ const EditableNode = ({
   };
 
   const handleBlur = () => {
-    onCancel();
+    // Only call onCancel if name is empty, otherwise save it
+    if(name.trim() === '') {
+      onCancel();
+    } else {
+      onSave(name);
+    }
   };
 
   return (
@@ -130,6 +136,7 @@ const FileTree = ({
 
   const handleSaveCreate = (newName: string) => {
     if (newName) {
+      const newPath = `${node.path}/${newName}`;
       if (isCreating === 'file') {
         onNewFile(node.path!, newName);
       } else if (isCreating === 'folder') {
@@ -168,7 +175,7 @@ const FileTree = ({
   return (
     <div>
       <ContextMenu>
-        <ContextMenuTrigger>
+        <ContextMenuTrigger disabled={!node.path}>
           <div
             className={cn(
               "flex items-center py-1.5 rounded-sm hover:bg-muted cursor-pointer text-sm select-none",
@@ -179,13 +186,13 @@ const FileTree = ({
           >
             {node.type === 'folder' ? (
               isExpanded ? (
-                <ChevronDown className="h-4 w-4 mr-1 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 mr-1 text-muted-foreground flex-shrink-0" />
               ) : (
-                <ChevronRight className="h-4 w-4 mr-1 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 mr-1 text-muted-foreground flex-shrink-0" />
               )
             ) : null}
-            {node.type === 'file' ? getFileIcon(node.name) : null}
-            <span>{node.name}</span>
+            {node.type === 'file' ? getFileIcon(node.name) : <div className="w-5 mr-1 flex-shrink-0"></div>}
+            <span className="truncate">{node.name}</span>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-48" onMouseUp={(e) => e.stopPropagation()}>
@@ -250,7 +257,7 @@ const FileTree = ({
   );
 };
 
-export default function FileExplorer({ fileTree, activeFile, onFileClick, onRename, onDelete, onNewFile, onNewFolder }: {
+export default function FileExplorer({ fileTree, activeFile, onFileClick, onRename, onDelete, onNewFile, onNewFolder, isLoading }: {
     fileTree: FileNode[];
     activeFile: string | null;
     onFileClick: (path: string) => void;
@@ -258,6 +265,7 @@ export default function FileExplorer({ fileTree, activeFile, onFileClick, onRena
     onDelete: (path: string) => void;
     onNewFile: (parentPath: string, name: string) => void;
     onNewFolder: (parentPath: string, name: string) => void;
+    isLoading: boolean;
 }) {
 
   return (
@@ -265,27 +273,28 @@ export default function FileExplorer({ fileTree, activeFile, onFileClick, onRena
       <h3 className="text-xs font-bold uppercase text-muted-foreground px-2 pt-1 pb-2 tracking-wider">
         Explorer
       </h3>
-      <div className="mt-1 space-y-0.5">
-        {fileTree
-            .sort((a,b) => {
-              if (a.type === 'folder' && b.type === 'file') return -1;
-              if (a.type === 'file' && b.type === 'folder') return 1;
-              return a.name.localeCompare(b.name);
-            })
-            .map((node) => (
-          <FileTree 
-            key={node.path} 
-            node={node} 
-            level={0}
-            activeFile={activeFile}
-            onFileClick={onFileClick}
-            onRename={onRename}
-            onDelete={onDelete}
-            onNewFile={onNewFile}
-            onNewFolder={onNewFolder}
-          />
-        ))}
-      </div>
+       {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        ) : (
+        <div className="mt-1 space-y-0.5">
+            {fileTree
+                .map((node) => (
+            <FileTree 
+                key={node.path} 
+                node={node} 
+                level={0}
+                activeFile={activeFile}
+                onFileClick={onFileClick}
+                onRename={onRename}
+                onDelete={onDelete}
+                onNewFile={onNewFile}
+                onNewFolder={onNewFolder}
+            />
+            ))}
+        </div>
+      )}
     </div>
   );
 }

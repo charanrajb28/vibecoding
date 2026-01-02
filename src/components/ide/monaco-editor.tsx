@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -5,22 +6,18 @@ import Editor from '@monaco-editor/react';
 
 interface MonacoEditorProps {
   code: string;
+  onChange: (value: string | undefined) => void;
 }
 
-export default function MonacoEditor({ code }: MonacoEditorProps) {
-  const handleEditorChange = (value: string | undefined) => {
-    // In a real app, you would handle code changes here
-    // e.g., setState, save to file, etc.
-    console.log('Editor content:', value);
-  };
+export default function MonacoEditor({ code, onChange }: MonacoEditorProps) {
 
   return (
     <Editor
       height="100%"
       defaultLanguage="typescript"
-      defaultValue={code}
+      value={code} // Use value instead of defaultValue to make it a controlled component
       theme="vs-dark"
-      onChange={handleEditorChange}
+      onChange={onChange}
       options={{
         minimap: { enabled: true },
         fontSize: 14,

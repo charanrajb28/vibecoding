@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type Project = {
@@ -8,6 +9,7 @@ export type Project = {
   gitRepoUrl?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  userId: string;
   // This is a client-side addition for UI purposes and not in the DB schema
   icon?: string; 
 };
@@ -53,55 +55,3 @@ export const templates: Template[] = [
     imageId: 'vite_template_logo',
   },
 ];
-
-export const fileTree: FileNode[] = [
-  {
-    name: 'app',
-    type: 'folder',
-    children: [
-      { name: 'page.tsx', type: 'file', content: 'export default function Home() { return <h1>Hello World</h1> }' },
-      { name: 'layout.tsx', type: 'file', content: 'export default function RootLayout({ children }) { return <html><body>{children}</body></html> }' },
-    ],
-  },
-  {
-    name: 'components',
-    type: 'folder',
-    children: [
-      { name: 'button.tsx', type: 'file', content: 'export function Button() { return <button>Click me</button> }' },
-    ]
-  },
-  {
-    name: 'public',
-    type: 'folder',
-    children: [
-      { name: 'favicon.ico', type: 'file' },
-    ]
-  },
-  { name: 'package.json', type: 'file', content: '{ "name": "my-app", "version": "0.1.0" }' },
-  { name: 'tailwind.config.ts', type: 'file', content: '/** @type {import(\'tailwindcss\').Config} */\nmodule.exports = { content: [], theme: { extend: {} }, plugins: [] }' },
-];
-
-export const sampleCode = `import React from 'react';
-import { Button } from '@/components/ui/button';
-
-function HeroSection() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-center px-4">
-      <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-        Build & Deploy Faster Than Ever
-      </h1>
-      <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mb-8">
-        CodeSail is an integrated development environment that brings your ideas to life with the power of AI.
-      </p>
-      <div className="flex gap-4">
-        <Button size="lg">Get Started</Button>
-        <Button size="lg" variant="outline">
-          View Projects
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-export default HeroSection;
-`;

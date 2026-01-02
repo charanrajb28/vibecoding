@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -10,86 +11,170 @@ import ActivityBar from './activity-bar';
 import FileExplorer from './file-explorer';
 import EditorPane from './editor-pane';
 import TerminalPane from './terminal-pane';
-import { fileTree as initialFileTree, type FileNode } from '@/lib/placeholder-data';
+import { type FileNode, type Project } from '@/lib/placeholder-data';
 import { useToast } from "@/hooks/use-toast";
 import AiToolsPanel from "./ai-tools-panel";
 import SourceControlPanel from "./source-control-panel";
 import WebView from "./webview-pane";
-
-// Helper to find a node in the tree
-const findNode = (nodes: FileNode[], path: string): FileNode | null => {
-  for (const node of nodes) {
-    if (node.path === path) return node;
-    if (node.children) {
-      const found = findNode(node.children, path);
-      if (found) return found;
-    }
-  }
-  return null;
-};
-
-// Helper to recursively get all child file paths
-const getAllChildFilePaths = (node: FileNode): string[] => {
-    if (node.type === 'file') {
-        return [node.path!];
-    }
-    if (node.children) {
-        return node.children.flatMap(getAllChildFilePaths);
-    }
-    return [];
-}
-
-
-const addPathsToTree = (nodes: FileNode[], parentPath = ''): FileNode[] => {
-  return nodes.map(node => {
-    // For root level, path should not start with /
-    const path = parentPath ? `${parentPath}/${node.name}` : `${node.name}`;
-    const newNode = { ...node, path };
-    if (newNode.children) {
-      newNode.children = addPathsToTree(newNode.children, path);
-    }
-    return newNode;
-  });
-};
-
-// Helper to delete a node from the tree
-const deleteNode = (nodes: FileNode[], path: string): FileNode[] => {
-    return nodes.filter(node => node.path !== path).map(node => {
-        if (node.children) {
-            return { ...node, children: deleteNode(node.children, path) };
-        }
-        return node;
-    });
-};
-
-
-// Helper to add a node to the tree
-const addNode = (nodes: FileNode[], parentPath: string, newNode: FileNode): FileNode[] => {
-    return nodes.map(node => {
-        if (node.path === parentPath) {
-            // Check if children array exists, if not create it
-            const children = node.children ? [...node.children, newNode] : [newNode];
-            return { ...node, children: children };
-        }
-        if (node.children) {
-            return { ...node, children: addNode(node.children, parentPath, newNode) };
-        }
-        return node;
-    });
-};
+import { type User } from "firebase/auth";
 
 export type ActivePanel = 'Files' | 'Source Control' | 'AI Tools';
 export type BottomPanel = 'terminal';
 
-
-export default function IdeLayout() {
+export default function IdeLayout({ project, user }: { project: Project, user: User | null }) {
   const { toast } = useToast();
-  const [fileTree, setFileTree] = React.useState<FileNode[]>(() => addPathsToTree(initialFileTree));
-  const [openFiles, setOpenFiles] = React.useState<string[]>(['app/page.tsx']);
-  const [activeFile, setActiveFile] = React.useState<string | null>('app/page.tsx');
+  const [fileTree, setFileTree] = React.useState<FileNode[]>([]);
+  const [isLoadingTree, setIsLoadingTree] = React.useState(true);
+  
+  const [openFiles, setOpenFiles] = React.useState<string[]>([]);
+  const [activeFile, setActiveFile] = React.useState<string | null>(null);
+  
+  const [fileContent, setFileContent] = React.useState<string | null>(null);
+  const [originalContent, setOriginalContent] = React.useState<string | null>(null);
+  const isDirty = fileContent !== originalContent;
+
   const [activePanel, setActivePanel] = React.useState<ActivePanel>('Files');
   const [activeBottomPanel, setActiveBottomPanel] = React.useState<BottomPanel | null>('terminal');
   const [isWebViewOpen, setIsWebViewOpen] = React.useState(true);
+
+  const fetchFileTree = React.useCallback(async () => {
+    if (!user) return;
+    setIsLoadingTree(true);
+    try {
+      const res = await fetch("/api/files/tree", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, projectId: project.id }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const tree = await res.json();
+      setFileTree(tree);
+    } catch (error: any) {
+      toast({ title: "Error fetching file tree", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoadingTree(false);
+    }
+  }, [user, project.id, toast]);
+
+  React.useEffect(() => {
+    fetchFileTree();
+  }, [fetchFileTree]);
+
+  const fetchFileContent = async (path: string) => {
+    if (!user) return;
+    setFileContent(null); // Show loading state
+    try {
+      const res = await fetch("/api/files/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, path }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { content } = await res.json();
+      setFileContent(content);
+      setOriginalContent(content);
+    } catch (error: any) {
+      toast({ title: "Error reading file", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleFileClick = (path: string) => {
+    if (isDirty) {
+        if (!confirm("You have unsaved changes. Are you sure you want to switch files?")) {
+            return;
+        }
+    }
+
+    if (!openFiles.includes(path)) {
+      setOpenFiles(prev => [...prev, path]);
+    }
+    setActiveFile(path);
+    fetchFileContent(path);
+  };
+
+  const handleFileClose = (path: string) => {
+    if (isDirty && activeFile === path) {
+       if (!confirm("You have unsaved changes. Are you sure you want to close this file?")) {
+            return;
+        }
+    }
+    const newOpenFiles = openFiles.filter(p => p !== path);
+    setOpenFiles(newOpenFiles);
+
+    if (activeFile === path) {
+      const newActiveFile = newOpenFiles.length > 0 ? newOpenFiles[newOpenFiles.length - 1] : null;
+      setActiveFile(newActiveFile);
+      if (newActiveFile) {
+        fetchFileContent(newActiveFile);
+      } else {
+        setFileContent(null);
+        setOriginalContent(null);
+      }
+    }
+  };
+  
+  const handleTabSelect = (path: string) => {
+    if (isDirty && activeFile !== path) {
+       if (!confirm("You have unsaved changes. Are you sure you want to switch files?")) {
+            return;
+        }
+    }
+    setActiveFile(path);
+    fetchFileContent(path);
+  }
+
+  const handleFileOperation = async (action: string, path: string, newPath?: string) => {
+    if (!user) return;
+    try {
+        const res = await fetch('/api/files/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.uid, action, path, newPath })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error || 'API call failed');
+        
+        toast({ title: "Success", description: `Operation ${action} successful.` });
+        fetchFileTree(); // Refetch the tree after any modification
+    } catch (error: any) {
+        toast({ title: `Error: ${action}`, description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleRename = (oldPath: string, newName: string) => {
+    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+    handleFileOperation('rename', oldPath, newPath);
+  };
+
+  const handleDelete = (path: string) => {
+    handleFileOperation('delete', path);
+  };
+
+  const handleNewFile = (parentPath: string, newName: string) => {
+    const newPath = `${parentPath}/${newName}`;
+    handleFileOperation('new-file', newPath);
+  };
+
+  const handleNewFolder = (parentPath: string, newName: string) => {
+    const newPath = `${parentPath}/${newName}`;
+    handleFileOperation('new-folder', newPath);
+  };
+  
+  const handleSave = async () => {
+    if (!user || !activeFile || !isDirty) return;
+    try {
+        const res = await fetch('/api/files/content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.uid, path: activeFile, content: fileContent })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        setOriginalContent(fileContent); // Mark as not dirty
+    } catch (error: any) {
+        toast({ title: 'Error Saving File', description: error.message, variant: 'destructive' });
+    }
+  };
 
   const handleBottomPanelChange = (panel: BottomPanel) => {
     setActiveBottomPanel(prev => prev === panel ? null : panel);
@@ -98,133 +183,6 @@ export default function IdeLayout() {
   const handleWebViewToggle = () => {
     setIsWebViewOpen(prev => !prev);
   }
-
-  const handleFileClick = (path: string) => {
-    const node = findNode(fileTree, path);
-    if (node && node.type === 'file') {
-      if (!openFiles.includes(path)) {
-        setOpenFiles(prev => [...prev, path]);
-      }
-      setActiveFile(path);
-    }
-  };
-
-  const handleFileClose = (path: string) => {
-    setOpenFiles(prev => prev.filter(p => p !== path));
-    if (activeFile === path) {
-      const remainingFiles = openFiles.filter(p => p !== path);
-      setActiveFile(remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1] : null);
-    }
-  };
-  
-  const handleTabSelect = (path: string) => {
-    setActiveFile(path);
-  }
-
-  const handleRename = (oldPath: string, newName: string) => {
-    const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
-    const newPath = parentPath ? `${parentPath}/${newName}` : newName;
-
-    if (findNode(fileTree, newPath)) {
-        toast({ title: "Error", description: "A file or folder with that name already exists.", variant: "destructive" });
-        return;
-    }
-    
-    setFileTree(prevTree => {
-        const nodeToRename = findNode(prevTree, oldPath);
-        if (!nodeToRename) return prevTree;
-
-        // Recursively update paths for children
-        const updateChildrenPaths = (nodes: FileNode[], oldParentPath: string, newParentPath: string): FileNode[] => {
-            return nodes.map(node => {
-                const updatedPath = node.path!.replace(oldParentPath, newParentPath);
-                const updatedNode = { ...node, path: updatedPath };
-                if (updatedNode.children) {
-                    updatedNode.children = updateChildrenPaths(updatedNode.children, oldParentPath, newParentPath);
-                }
-                return updatedNode;
-            });
-        };
-
-        const tempTree = deleteNode(prevTree, oldPath);
-        
-        const renamedNode: FileNode = { ...nodeToRename, name: newName, path: newPath };
-        if (renamedNode.children) {
-            renamedNode.children = updateChildrenPaths(renamedNode.children, oldPath, newPath);
-        }
-        
-        if (!parentPath) {
-          return [...tempTree, renamedNode];
-        }
-
-        const finalTree = addNode(tempTree, parentPath, renamedNode);
-        return finalTree;
-    });
-
-    // Update open files and active file
-    setOpenFiles(prev => prev.map(p => p.startsWith(oldPath) ? p.replace(oldPath, newPath) : p));
-    if (activeFile?.startsWith(oldPath)) {
-        setActiveFile(prev => prev!.replace(oldPath, newPath));
-    }
-
-    toast({ title: "Renamed", description: `Renamed to ${newName}` });
-  };
-
-  const handleDelete = (path: string) => {
-    const nodeToDelete = findNode(fileTree, path);
-    if (!nodeToDelete) return;
-
-    let pathsToDelete: string[] = [path];
-    if (nodeToDelete.type === 'folder') {
-        pathsToDelete = [path, ...getAllChildFilePaths(nodeToDelete)];
-    }
-    
-    // Close tabs for deleted files
-    const remainingOpenFiles = openFiles.filter(p => !pathsToDelete.includes(p));
-    setOpenFiles(remainingOpenFiles);
-
-    // Update active file if it was deleted
-    if (activeFile && pathsToDelete.includes(activeFile)) {
-        setActiveFile(remainingOpenFiles.length > 0 ? remainingOpenFiles[remainingOpenFiles.length - 1] : null);
-    }
-
-    setFileTree(prevTree => deleteNode(prevTree, path));
-    toast({ title: "Deleted", description: `Deleted ${nodeToDelete.name}` });
-  };
-
-  const handleNewFile = (parentPath: string, newName: string) => {
-    const newPath = parentPath ? `${parentPath}/${newName}`: newName;
-    if (findNode(fileTree, newPath)) {
-      toast({ title: "Error", description: "A file with that name already exists.", variant: "destructive" });
-      return;
-    }
-    const newNode: FileNode = { name: newName, type: 'file', path: newPath, content: '' };
-    
-    if (!parentPath) {
-      setFileTree(prevTree => [...prevTree, newNode]);
-    } else {
-      setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
-    }
-    handleFileClick(newPath); // Open the new file
-    toast({ title: "Created", description: `Created file ${newName}` });
-  };
-
-  const handleNewFolder = (parentPath: string, newName:string) => {
-    const newPath = parentPath ? `${parentPath}/${newName}`: newName;
-    if (findNode(fileTree, newPath)) {
-        toast({ title: "Error", description: "A folder with that name already exists.", variant: "destructive" });
-        return;
-    }
-    const newNode: FileNode = { name: newName, type: 'folder', path: newPath, children: [] };
-    
-    if(!parentPath) {
-       setFileTree(prevTree => [...prevTree, newNode]);
-    } else {
-       setFileTree(prevTree => addNode(prevTree, parentPath, newNode));
-    }
-    
-    toast({ title: "Created", description: `Created folder ${newName}` });
-  };
   
   const renderActivePanel = () => {
     switch (activePanel) {
@@ -238,6 +196,7 @@ export default function IdeLayout() {
             onDelete={handleDelete}
             onNewFile={handleNewFile}
             onNewFolder={handleNewFolder}
+            isLoading={isLoadingTree}
           />
         );
       case 'Source Control':
@@ -268,13 +227,16 @@ export default function IdeLayout() {
                   <EditorPane
                     openFiles={openFiles}
                     activeFile={activeFile}
-                    fileTree={fileTree}
                     onClose={handleFileClose}
                     onSelect={handleTabSelect}
                     activeBottomPanel={activeBottomPanel}
                     onBottomPanelChange={handleBottomPanelChange}
                     isWebViewOpen={isWebViewOpen}
                     onWebViewToggle={handleWebViewToggle}
+                    onSave={handleSave}
+                    fileContent={fileContent}
+                    onContentChange={setFileContent}
+                    isDirty={isDirty}
                   />
                 </ResizablePanel>
                 {activeBottomPanel && (

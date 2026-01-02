@@ -1,39 +1,51 @@
+
 "use client";
 
-import React from 'react';
-import { X, Terminal, Globe } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { X, Terminal, Globe, Save } from 'lucide-react';
 import MonacoEditor from './monaco-editor';
 import { FileNode } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
-const findNode = (nodes: FileNode[], path: string): FileNode | null => {
-  for (const node of nodes) {
-    if (node.path === path) return node;
-    if (node.children) {
-      const found = findNode(node.children, path);
-      if (found) return found;
-    }
-  }
-  return null;
-};
-
-
-export default function EditorPane({ openFiles, activeFile, fileTree, onClose, onSelect, activeBottomPanel, onBottomPanelChange, isWebViewOpen, onWebViewToggle }: {
+export default function EditorPane({ 
+  openFiles, 
+  activeFile, 
+  onClose, 
+  onSelect, 
+  activeBottomPanel, 
+  onBottomPanelChange, 
+  isWebViewOpen, 
+  onWebViewToggle,
+  onSave,
+  fileContent,
+  onContentChange,
+  isDirty,
+}: {
   openFiles: string[];
   activeFile: string | null;
-  fileTree: FileNode[];
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
   activeBottomPanel: 'terminal' | null;
   onBottomPanelChange: (panel: 'terminal') => void;
   isWebViewOpen: boolean;
   onWebViewToggle: () => void;
+  onSave: () => void;
+  fileContent: string | null;
+  onContentChange: (content: string) => void;
+  isDirty: boolean;
 }) {
-  const activeNode = activeFile ? findNode(fileTree, activeFile) : null;
-  const editorCode = activeNode?.content || `// File not found or has no content: ${activeFile}`;
-
   const getFileName = (path: string) => path.split('/').pop() || '';
+  const { toast } = useToast();
+
+  const handleSave = () => {
+    onSave();
+    toast({
+      title: "File Saved",
+      description: `${getFileName(activeFile!)} has been saved.`,
+    });
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -49,6 +61,7 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
               )}
             >
               <span>{getFileName(path)}</span>
+              {isDirty && activeFile === path && <div className="h-2 w-2 rounded-full bg-primary" />}
               <X
                 className="h-4 w-4 p-0.5 rounded-sm hover:bg-accent"
                 onClick={(e) => {
@@ -60,6 +73,16 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
           ))}
         </div>
         <div className="flex items-center gap-2">
+           <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={!activeFile || !isDirty}
+              className="h-8 px-2"
+           >
+             <Save className="h-4 w-4" />
+             <span className="ml-2 hidden sm:inline">Save</span>
+           </Button>
            <Button 
             variant={activeBottomPanel === 'terminal' ? 'secondary' : 'ghost'} 
             size="sm" 
@@ -82,7 +105,17 @@ export default function EditorPane({ openFiles, activeFile, fileTree, onClose, o
       </div>
       <div className="flex-grow relative">
         {activeFile ? (
-            <MonacoEditor key={activeFile} code={editorCode} />
+            fileContent !== null ? (
+                <MonacoEditor 
+                    key={activeFile} 
+                    code={fileContent}
+                    onChange={onContentChange}
+                />
+            ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                    Loading file...
+                </div>
+            )
         ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
                 Select a file to open
