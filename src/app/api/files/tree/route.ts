@@ -4,36 +4,41 @@ import k8s from "@kubernetes/client-node";
 import { getKubeClient } from "@/lib/kube";
 
 function buildTree(paths: string[], root: string) {
-    const rootNode = { name: projectId, type: 'folder', path: root, children: [] };
+    const rootNode = { name: 'workspace', type: 'folder', path: root, children: [] as any[] };
     const map: { [key: string]: any } = { [root]: rootNode };
 
     // Handle empty find output
     if (paths.length === 1 && paths[0] === '') {
         return [rootNode];
     }
+    
+    // Sort paths to ensure parent directories are created before children
+    paths.sort();
 
     paths.forEach(path => {
         const parts = path.substring(root.length + 1).split('/');
+        let currentParent = rootNode;
         let currentPath = root;
-        let parent = rootNode.children;
 
         parts.forEach((part, index) => {
             currentPath += `/${part}`;
-            let node = parent.find(child => child.name === part);
+            let node = currentParent.children.find(child => child.name === part);
 
             if (!node) {
-                const isDirectory = index < parts.length - 1 || path.endsWith('/');
+                const isDirectory = path.endsWith('/') || index < parts.length - 1;
                 node = {
                     name: part,
                     path: currentPath,
                     type: isDirectory ? 'folder' : 'file',
-                    children: isDirectory ? [] : undefined,
                 };
-                parent.push(node);
+                if (isDirectory) {
+                    node.children = [];
+                }
+                currentParent.children.push(node);
             }
-
+            
             if (node.type === 'folder') {
-                parent = node.children!;
+                currentParent = node;
             }
         });
     });
@@ -42,11 +47,8 @@ function buildTree(paths: string[], root: string) {
 }
 
 
-let projectId = "";
-
 export async function POST(req: Request) {
-  const { userId, projectId: pId } = await req.json();
-  projectId = pId;
+  const { userId, projectId } = await req.json();
   const podName = `user-${userId.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 50)}`;
   const root = `/workspace/${projectId}`;
 
@@ -70,21 +72,22 @@ export async function POST(req: Request) {
     }
   });
 
-  // Using find to list both files and directories
+  // Using find to list all files and directories that exist
   await exec.exec(
     "default",
     podName,
     "runner",
     // Find all files and directories, then strip leading './'
-    ["bash", "-c", `find ${root} -mindepth 1 | sed 's|^./||'`],
+    ["bash", "-c", `cd ${root} && find . -mindepth 1 | sed 's|^./||'`],
     stream,
     streamErr,
     null,
     false
   );
 
-  const filesAndDirs = output.trim().split("\n").filter(p => p); // Filter out empty strings
-  const tree = buildTree(filesAndDirs, root);
+  const relativePaths = output.trim().split("\n").filter(p => p); // Filter out empty strings
+  const absolutePaths = relativePaths.map(p => `${root}/${p}`);
+  const tree = buildTree(absolutePaths, root);
   
   return NextResponse.json(tree);
 }
