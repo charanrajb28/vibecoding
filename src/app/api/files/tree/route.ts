@@ -92,6 +92,8 @@ export async function POST(req: Request) {
 
   const files = output.trim().split("\n").filter(Boolean);
   const tree = buildTree(files, root, projectId);
+  
+  console.log('buildTree output:', JSON.stringify(tree, null, 2));
 
   return NextResponse.json(tree);
 }
