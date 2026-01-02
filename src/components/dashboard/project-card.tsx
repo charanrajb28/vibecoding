@@ -16,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Trash2, Edit, PlayCircle, Component, Server } from 'lucide-react';
 import type { Project } from '@/lib/placeholder-data';
@@ -26,6 +27,7 @@ import { formatDistanceToNow } from 'date-fns';
 type ProjectCardProps = {
   project: Project;
   iconName: string;
+  onDelete: () => void;
 };
 
 // A simple map for pod/workspace status, can be expanded later
@@ -53,7 +55,7 @@ const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = 
 };
 
 
-export default function ProjectCard({ project, iconName }: ProjectCardProps) {
+export default function ProjectCard({ project, iconName, onDelete }: ProjectCardProps) {
   const Icon = iconMap[project.template] || Component;
   
   // A real implementation would check the k8s pod status
@@ -98,9 +100,10 @@ export default function ProjectCard({ project, iconName }: ProjectCardProps) {
             </DropdownMenuItem>
             <DropdownMenuItem>
                 <Edit className="mr-2 h-4 w-4" />
-                Edit
+                Rename
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-500 focus:text-red-500">
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
             </DropdownMenuItem>

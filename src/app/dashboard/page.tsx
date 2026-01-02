@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import DashboardHeader from '@/components/dashboard/dashboard-header';
 import ProjectCard from '@/components/dashboard/project-card';
+import DeleteProjectDialog from '@/components/dashboard/delete-project-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
 import type { Project } from '@/lib/placeholder-data';
+import { useToast } from '@/hooks/use-toast';
 
 function ProjectSkeleton() {
   return (
@@ -42,6 +44,8 @@ function NoProjects() {
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -51,6 +55,35 @@ export default function DashboardPage() {
   const { data: projects, isLoading: areProjectsLoading } = useCollection<Project>(projectsQuery);
 
   const isLoading = isUserLoading || areProjectsLoading;
+
+  const handleOpenDeleteDialog = (project: Project) => {
+    setProjectToDelete(project);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setProjectToDelete(null);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete || !user || !firestore) return;
+
+    try {
+      const projectRef = doc(firestore, 'users', user.uid, 'projects', projectToDelete.id);
+      await deleteDoc(projectRef);
+      toast({
+        title: 'Project Deleted',
+        description: `Your project "${projectToDelete.name}" has been successfully deleted.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Deletion Failed',
+        description: error.message || 'An unknown error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      handleCloseDeleteDialog();
+    }
+  };
 
   return (
     <>
@@ -65,13 +98,26 @@ export default function DashboardPage() {
         ) : projects && projects.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} iconName={project.icon || 'component'} />
+              <ProjectCard 
+                key={project.id} 
+                project={project} 
+                iconName={project.icon || 'component'}
+                onDelete={() => handleOpenDeleteDialog(project)}
+              />
             ))}
           </div>
         ) : (
             <NoProjects />
         )}
       </div>
+      {projectToDelete && (
+        <DeleteProjectDialog
+          isOpen={!!projectToDelete}
+          onOpenChange={handleCloseDeleteDialog}
+          onConfirm={handleDeleteProject}
+          projectName={projectToDelete.name}
+        />
+      )}
     </>
   );
 }
