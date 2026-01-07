@@ -265,7 +265,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
                   <>
                     <ResizableHandle />
                     <ResizablePanel defaultSize={25} minSize={15}>
-                      <TerminalPane />
+                      <TerminalPane user={user} project={project} />
                     </ResizablePanel>
                   </>
                 )}
