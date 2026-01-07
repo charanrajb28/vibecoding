@@ -17,6 +17,7 @@ import AiToolsPanel from "./ai-tools-panel";
 import SourceControlPanel from "./source-control-panel";
 import WebView from "./webview-pane";
 import { type User } from "firebase/auth";
+import { useFileTreeRefresh, triggerFileTreeRefresh } from "@/lib/file-tree-refresh";
 
 export type ActivePanel = 'Files' | 'Source Control' | 'AI Tools';
 export type BottomPanel = 'terminal';
@@ -55,6 +56,9 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
       setIsLoadingTree(false);
     }
   }, [user, project.id, toast]);
+
+  // Subscribe to the global refresh signal
+  useFileTreeRefresh(fetchFileTree);
 
   React.useEffect(() => {
     fetchFileTree();
@@ -100,6 +104,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
         title: "File Saved",
         description: `${filePath.split('/').pop()} has been saved.`,
       });
+      triggerFileTreeRefresh(); // Trigger refresh on successful write
     } catch (error: any) {
       toast({ title: "Error Saving File", description: error.message, variant: "destructive" });
     }
@@ -162,7 +167,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
         if (!result.success) throw new Error(result.error || 'API call failed');
         
         toast({ title: "Success", description: `Operation ${action} successful.` });
-        fetchFileTree(); // Refetch the tree after any modification
+        triggerFileTreeRefresh(); // Refresh after any modification
     } catch (error: any) {
         toast({ title: `Error: ${action}`, description: error.message, variant: 'destructive' });
     }

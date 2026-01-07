@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -5,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type User } from "firebase/auth";
 import { type Project } from "@/lib/placeholder-data";
 import { Loader2 } from "lucide-react";
+import { triggerFileTreeRefresh } from "@/lib/file-tree-refresh";
 
 type Line = {
   id: number;
@@ -46,32 +48,41 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
     setHistory(h => [command, ...h]);
     setHistoryIndex(-1);
 
-    // Special handling for 'cd' to update client-side state
-    if (command.trim().startsWith('cd ')) {
-        // We'll execute 'cd' and then 'pwd' to get the new directory
-        const cdCommand = `${command} && pwd`;
-        const res = await fetch("/api/terminal/exec", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: user.uid, command: cdCommand, cwd }),
-        });
-        const { output } = await res.json();
-        const newCwd = output.split('\n').pop()?.trim();
-        if (newCwd) {
-            setCwd(newCwd);
+    try {
+        // Special handling for 'cd' to update client-side state
+        if (command.trim().startsWith('cd ')) {
+            // We'll execute 'cd' and then 'pwd' to get the new directory
+            const cdCommand = `${command} && pwd`;
+            const res = await fetch("/api/terminal/exec", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user.uid, command: cdCommand, cwd }),
+            });
+            const { output } = await res.json();
+            const newCwd = output.split('\n').pop()?.trim();
+            if (newCwd && newCwd.startsWith('/workspace')) {
+                setCwd(newCwd);
+            }
+            setLines(l => [...l, { id: Date.now()+1, type: "output", content: output || "" }]);
+        } else {
+            const res = await fetch("/api/terminal/exec", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user.uid, command, cwd }),
+            });
+            const { output } = await res.json();
+            setLines(l => [...l, { id: Date.now()+1, type: "output", content: output || "" }]);
         }
-        setLines(l => [...l, { id: Date.now()+1, type: "output", content: output || "" }]);
-    } else {
-        const res = await fetch("/api/terminal/exec", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: user.uid, command, cwd }),
-        });
-        const { output } = await res.json();
-        setLines(l => [...l, { id: Date.now()+1, type: "output", content: output || "" }]);
+    } catch (error: any) {
+        setLines(l => [...l, { id: Date.now()+1, type: "output", content: error.message || "An unknown error occurred." }]);
+    } finally {
+        setIsLoading(false);
+        // If the command could have modified files, trigger a refresh
+        const isFsCommand = ['touch', 'mkdir', 'rm', 'mv', 'cp', 'git', 'npm', 'pnpm'].some(c => command.startsWith(c));
+        if (isFsCommand) {
+            triggerFileTreeRefresh();
+        }
     }
-    
-    setIsLoading(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
