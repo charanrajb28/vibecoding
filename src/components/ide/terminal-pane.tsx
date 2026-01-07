@@ -20,10 +20,10 @@ type TerminalPaneProps = {
   project: Project;
 };
 
-const Prompt = ({ cwd, project }: { cwd: string, project: Project }) => (
+const Prompt = ({ cwd, project }: { cwd: string | undefined, project: Project }) => (
   <>
     <span className="text-green-400">user@codesail:</span>
-    <span className="text-blue-400">{cwd.replace(`/workspace/${project.id}`, '~')}</span>
+    <span className="text-blue-400">{cwd ? cwd.replace(`/workspace/${project.id}`, '~') : '~'}</span>
     <span>$&nbsp;</span>
   </>
 );
@@ -136,7 +136,7 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
               <div key={line.id}>
                 {line.type === 'command' && (
                   <div className="flex">
-                    <Prompt cwd={line.cwd!} project={project} />
+                    <Prompt cwd={line.cwd} project={project} />
                     <span>{line.content}</span>
                   </div>
                 )}
