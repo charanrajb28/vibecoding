@@ -60,23 +60,50 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
     fetchFileTree();
   }, [fetchFileTree]);
 
-  const fetchFileContent = async (path: string) => {
+  const handleFileRead = async (filePath: string) => {
     if (!user) return;
     setFileContent(null); // Show loading state
     try {
-      const res = await fetch("/api/files/content", {
+      const res = await fetch("/api/files/read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid, path }),
+        body: JSON.stringify({ userId: user.uid, filePath }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to read file');
+      }
       const { content } = await res.json();
       setFileContent(content);
       setOriginalContent(content);
     } catch (error: any) {
-      toast({ title: "Error reading file", description: error.message, variant: "destructive" });
+      toast({ title: "Error Reading File", description: error.message, variant: "destructive" });
+      setFileContent(`// Error: Could not load file content.\n// ${error.message}`);
+      setOriginalContent(null);
     }
   };
+
+  const handleFileWrite = React.useCallback(async (filePath: string, content: string) => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/files/write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, filePath, content }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to write file');
+      }
+      setOriginalContent(content); // Update original content on successful save
+      toast({
+        title: "File Saved",
+        description: `${filePath.split('/').pop()} has been saved.`,
+      });
+    } catch (error: any) {
+      toast({ title: "Error Saving File", description: error.message, variant: "destructive" });
+    }
+  }, [user, toast]);
 
   const handleFileClick = (path: string) => {
     if (isDirty) {
@@ -89,7 +116,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
       setOpenFiles(prev => [...prev, path]);
     }
     setActiveFile(path);
-    fetchFileContent(path);
+    handleFileRead(path);
   };
 
   const handleFileClose = (path: string) => {
@@ -105,7 +132,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
       const newActiveFile = newOpenFiles.length > 0 ? newOpenFiles[newOpenFiles.length - 1] : null;
       setActiveFile(newActiveFile);
       if (newActiveFile) {
-        fetchFileContent(newActiveFile);
+        handleFileRead(newActiveFile);
       } else {
         setFileContent(null);
         setOriginalContent(null);
@@ -120,16 +147,16 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
         }
     }
     setActiveFile(path);
-    fetchFileContent(path);
+    handleFileRead(path);
   }
 
   const handleFileOperation = async (action: string, path: string, newPath?: string) => {
     if (!user) return;
     try {
-        const res = await fetch('/api/files/update', {
+        const res = await fetch('/api/files/file-ops', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.uid, action, path, newPath })
+            body: JSON.stringify({ userId: user.uid, projectId: project.id, action, path, newPath })
         });
         const result = await res.json();
         if (!result.success) throw new Error(result.error || 'API call failed');
@@ -161,20 +188,15 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
     handleFileOperation('new-folder', newPath);
   };
   
-  const handleSave = async () => {
-    if (!user || !activeFile || !isDirty) return;
-    try {
-        const res = await fetch('/api/files/content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.uid, path: activeFile, content: fileContent })
-        });
-        if (!res.ok) throw new Error(await res.text());
-        setOriginalContent(fileContent); // Mark as not dirty
-    } catch (error: any) {
-        toast({ title: 'Error Saving File', description: error.message, variant: 'destructive' });
+  const handleSave = () => {
+    if (activeFile && fileContent !== null) {
+      handleFileWrite(activeFile, fileContent);
     }
   };
+
+  const handleContentChange = (content: string) => {
+    setFileContent(content);
+  }
 
   const handleBottomPanelChange = (panel: BottomPanel) => {
     setActiveBottomPanel(prev => prev === panel ? null : panel);
@@ -235,7 +257,7 @@ export default function IdeLayout({ project, user }: { project: Project, user: U
                     onWebViewToggle={handleWebViewToggle}
                     onSave={handleSave}
                     fileContent={fileContent}
-                    onContentChange={setFileContent}
+                    onContentChange={handleContentChange}
                     isDirty={isDirty}
                   />
                 </ResizablePanel>
