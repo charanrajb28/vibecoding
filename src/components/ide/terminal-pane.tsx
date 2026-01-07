@@ -28,6 +28,29 @@ const Prompt = ({ cwd, project }: { cwd: string | undefined, project: Project })
   </>
 );
 
+const renderWithLinks = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s"'<>`]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyan-400 underline hover:text-cyan-300"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
+
 export default function TerminalPane({ user, project }: TerminalPaneProps) {
   const [lines, setLines] = React.useState<Line[]>([
     { id: 1, type: 'output', content: 'Welcome to the CodeSail terminal!' },
@@ -140,7 +163,7 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
                     <span>{line.content}</span>
                   </div>
                 )}
-                {line.type === 'output' && <pre className="text-muted-foreground whitespace-pre-wrap">{line.content}</pre>}
+                {line.type === 'output' && <pre className="text-muted-foreground whitespace-pre-wrap">{renderWithLinks(line.content)}</pre>}
               </div>
             ))}
             {isLoading && <Loader2 className="h-4 w-4 animate-spin my-1" />}

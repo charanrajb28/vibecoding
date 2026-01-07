@@ -62,10 +62,10 @@ export async function POST(req: Request) {
   });
 
   const cmd = `
-    mkdir -p ${root}
-    [ -z "$(ls -A ${root})" ] && touch ${root}/README.md
-    find ${root} -printf "%p|%s|%y\\n"
-  `;
+  mkdir -p ${root}
+  [ -z "$(ls -A ${root})" ] && touch ${root}/README.md
+  find ${root} -path "*/node_modules" -prune -o -printf "%p|%s|%y\\n"
+`;
 
   console.log("▶ Executing command in pod:\n", cmd);
   stdoutStream.setEncoding("utf8");
