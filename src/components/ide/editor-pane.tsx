@@ -107,7 +107,8 @@ export default function EditorPane({
         {activeFile ? (
             fileContent !== null ? (
                 <MonacoEditor 
-                    key={activeFile} 
+                    key={activeFile}
+                    filePath={activeFile}
                     code={fileContent}
                     onChange={onContentChange}
                 />
