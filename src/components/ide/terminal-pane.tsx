@@ -12,12 +12,21 @@ type Line = {
   id: number;
   type: 'command' | 'output';
   content: string;
+  cwd?: string; // Store cwd for each command
 };
 
 type TerminalPaneProps = {
   user: User | null;
   project: Project;
 };
+
+const Prompt = ({ cwd, project }: { cwd: string, project: Project }) => (
+  <>
+    <span className="text-green-400">user@codesail:</span>
+    <span className="text-blue-400">{cwd.replace(`/workspace/${project.id}`, '~')}</span>
+    <span>$&nbsp;</span>
+  </>
+);
 
 export default function TerminalPane({ user, project }: TerminalPaneProps) {
   const [lines, setLines] = React.useState<Line[]>([
@@ -43,7 +52,7 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
       return;
     };
 
-    setLines(l => [...l, { id: Date.now(), type: 'command', content: command }]);
+    setLines(l => [...l, { id: Date.now(), type: 'command', content: command, cwd: cwd }]);
     setIsLoading(true);
     setHistory(h => [command, ...h]);
     setHistoryIndex(-1);
@@ -113,14 +122,6 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
     }
   };
 
-  const Prompt = () => (
-    <>
-      <span className="text-green-400">user@codesail:</span>
-      <span className="text-blue-400">{cwd.replace(`/workspace/${project.id}`, '~')}</span>
-      <span>$&nbsp;</span>
-    </>
-  );
-
   return (
     <div className="h-full flex flex-col bg-card text-sm">
       <Tabs defaultValue="terminal" className="flex flex-col h-full">
@@ -133,13 +134,18 @@ export default function TerminalPane({ user, project }: TerminalPaneProps) {
           <div className="h-full">
             {lines.map(line => (
               <div key={line.id}>
-                {line.type === 'command' && <div className="flex"><Prompt /><span>{line.content}</span></div>}
+                {line.type === 'command' && (
+                  <div className="flex">
+                    <Prompt cwd={line.cwd!} project={project} />
+                    <span>{line.content}</span>
+                  </div>
+                )}
                 {line.type === 'output' && <pre className="text-muted-foreground whitespace-pre-wrap">{line.content}</pre>}
               </div>
             ))}
             {isLoading && <Loader2 className="h-4 w-4 animate-spin my-1" />}
              <div className="flex">
-              {!isLoading && <Prompt />}
+              {!isLoading && <Prompt cwd={cwd} project={project} />}
               <input
                 ref={inputRef}
                 id="terminal-input"
