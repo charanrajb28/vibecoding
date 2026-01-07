@@ -24,38 +24,38 @@ export async function POST(req: Request) {
   stderr.on("data", d => errorOutput += d.toString());
 
 
+  const execPromise = new Promise<void>((resolve, reject) => {
+      const stream = exec.exec(
+          "default",
+          podName,
+          "runner",
+          ["cat", filePath],
+          stdout,
+          stderr,
+          null,
+          false,
+          (status) => {
+              if (status.status === 'Failure') {
+                  reject(new Error(`Exec failed with status: ${status.message}`));
+              }
+          }
+      );
+      
+      stream.onclose = () => {
+          resolve();
+      };
+
+      stream.onerror = (err) => {
+          reject(err);
+      };
+  });
+
+  const timeoutPromise = new Promise<void>((_, reject) =>
+    setTimeout(() => reject(new Error("Exec command timed out")), 5000)
+  );
+
   try {
-    await new Promise<void>((resolve, reject) => {
-        const stream = exec.exec(
-            "default",
-            podName,
-            "runner",
-            ["cat", filePath],
-            stdout,
-            stderr,
-            null,
-            false,
-            (status) => {
-                if (status.status === 'Failure') {
-                    reject(new Error(`Exec failed with status: ${status.message}`));
-                }
-            }
-        );
-        let timeout = setTimeout(() => {
-            stream.abort();
-            reject(new Error("Exec command timed out"));
-        }, 5000);
-
-        stream.onclose = () => {
-            clearTimeout(timeout);
-            resolve();
-        };
-
-        stream.onerror = (err) => {
-            clearTimeout(timeout);
-            reject(err);
-        };
-    });
+    await Promise.race([execPromise, timeoutPromise]);
 
     if (errorOutput) {
         return NextResponse.json({ error: errorOutput }, { status: 500 });
@@ -64,6 +64,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ content });
 
   } catch (err: any) {
+    // Check if the error message is from our timeout
+    if (err.message === "Exec command timed out") {
+        return NextResponse.json({ error: "Read operation timed out" }, { status: 504 });
+    }
     return NextResponse.json({ error: err.message || 'Failed to read file' }, { status: 500 });
   }
 }
